@@ -1,0 +1,15 @@
+{
+  "easycom": { "autoscan": true, "custom": { "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue" } },
+  "pages": [
+    { "path": "pages/discover/index", "style": { "navigationBarTitleText": "圆梦" } },
+    { "path": "pages/stories/index", "style": { "navigationBarTitleText": "圆梦故事" } },
+    { "path": "pages/publish/index", "style": { "navigationBarTitleText": "发布梦想" } },
+    { "path": "pages/inbox/index", "style": { "navigationBarTitleText": "消息" } },
+    { "path": "pages/me/index", "style": { "navigationBarTitleText": "我的" } },
+    { "path": "pages/dream/detail", "style": { "navigationBarTitleText": "梦想详情" } },
+    { "path": "pages/auth/index", "style": { "navigationBarTitleText": "加入圆梦" } },
+    { "path": "pages/chat/index", "style": { "navigationBarTitleText": "圆梦交流" } },
+    { "path": "pages/profile/index", "style": { "navigationBarTitleText": "梦想名片" } }
+  ],
+  "globalStyle": { "navigationStyle": "custom", "backgroundColor": "#f5f7f6", "navigationBarTextStyle": "black" }
+}
