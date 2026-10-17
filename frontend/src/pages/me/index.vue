@@ -20,6 +20,10 @@
       <wd-button v-if="hasMore" block plain :loading="loading" @click="load(false)">更多梦想</wd-button>
       <view class="actions center"><wd-button type="text" @click="logout">退出登录</wd-button></view>
     </template>
+    <wd-cell-group border class="actions">
+      <wd-cell v-if="session.token" title="评论资格" :value="session.user?.commentQualification?.passed ? '已通过' : '去答题'" is-link @click="go('/pages/admission/index')" />
+      <wd-cell title="免责声明与线下交流风险告知" is-link @click="go('/pages/legal/notice')" />
+    </wd-cell-group>
     <wd-popup v-model="editing" position="bottom" :z-index="100" :closable="!saving" :close-on-click-modal="!saving" safe-area-inset-bottom>
       <scroll-view scroll-y style="max-height: 85vh"><view class="page-body">
         <view class="heading">编辑资料</view>

@@ -11,6 +11,7 @@
     <MediaGallery :media="dream.media" compact />
     <view v-if="dream.targetAmount" class="space" />
     <wd-text v-if="dream.targetAmount" :text="'心愿金额 ¥' + Number(dream.targetAmount).toLocaleString()" type="primary" bold />
+    <view v-if="!dream.hidden" class="actions"><DreamReactions :dream="dream" show-comments /></view>
     <template #footer>
       <view class="row between">
         <view class="row muted"><UserAvatar :src="dream.authorAvatar" :size="28" /><text>{{ dream.authorName }}<text v-if="dream.city"> · {{ dream.city }}</text></text></view>
@@ -24,5 +25,6 @@
 import { go, label, statuses, helpTypes } from '../lib/api'
 import MediaGallery from './MediaGallery.vue'
 import UserAvatar from './UserAvatar.vue'
+import DreamReactions from './DreamReactions.vue'
 defineProps({ dream: { type: Object, required: true } })
 </script>

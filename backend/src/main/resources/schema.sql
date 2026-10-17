@@ -10,10 +10,26 @@ CREATE TABLE IF NOT EXISTS members (
   city VARCHAR(60) NOT NULL DEFAULT '',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+-- 旧注册流程的历史凭证表保留，不再签发或用于注册/评论校验。
 CREATE TABLE IF NOT EXISTS admission_passes (
   token_hash VARCHAR(64) PRIMARY KEY,
   expires_at TIMESTAMP NOT NULL,
   used BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE TABLE IF NOT EXISTS registration_consents (
+  member_id BIGINT PRIMARY KEY,
+  notice_version VARCHAR(40) NOT NULL,
+  notice_sha256 VARCHAR(64) NOT NULL,
+  notice_snapshot TEXT NOT NULL,
+  accepted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (member_id) REFERENCES members(id)
+);
+CREATE TABLE IF NOT EXISTS comment_qualifications (
+  member_id BIGINT PRIMARY KEY,
+  exam_version VARCHAR(40) NOT NULL,
+  score INT NOT NULL,
+  passed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (member_id) REFERENCES members(id)
 );
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash VARCHAR(64) PRIMARY KEY,
@@ -93,6 +109,56 @@ CREATE TABLE IF NOT EXISTS administrators (
   member_id BIGINT PRIMARY KEY,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (member_id) REFERENCES members(id)
+);
+CREATE TABLE IF NOT EXISTS dream_reactions (
+  dream_id BIGINT NOT NULL,
+  member_id BIGINT NOT NULL,
+  reaction VARCHAR(12) NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (dream_id, member_id),
+  FOREIGN KEY (dream_id) REFERENCES dreams(id),
+  FOREIGN KEY (member_id) REFERENCES members(id)
+);
+CREATE TABLE IF NOT EXISTS dream_comments (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  dream_id BIGINT NOT NULL,
+  member_id BIGINT NOT NULL,
+  -- H2 按 UTF-16 计算列长度；接口仍限制为 1000 个 Unicode 字符。
+  content VARCHAR(2000) NOT NULL,
+  anonymous BOOLEAN NOT NULL DEFAULT FALSE,
+  deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_comment_dream (dream_id, id),
+  FOREIGN KEY (dream_id) REFERENCES dreams(id),
+  FOREIGN KEY (member_id) REFERENCES members(id)
+);
+CREATE TABLE IF NOT EXISTS comment_moderation (
+  comment_id BIGINT PRIMARY KEY,
+  hidden BOOLEAN NOT NULL DEFAULT FALSE,
+  reason VARCHAR(500) NOT NULL,
+  admin_id BIGINT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (comment_id) REFERENCES dream_comments(id),
+  FOREIGN KEY (admin_id) REFERENCES administrators(member_id)
+);
+-- 原图不复制；来源评论被删除或下架时，收藏与转发同步不可用。
+CREATE TABLE IF NOT EXISTS comment_attachments (
+  comment_id BIGINT NOT NULL,
+  media_id VARCHAR(36) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_source BOOLEAN NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (comment_id, media_id),
+  INDEX idx_comment_media (media_id, is_source),
+  FOREIGN KEY (comment_id) REFERENCES dream_comments(id),
+  FOREIGN KEY (media_id) REFERENCES media_files(id)
+);
+CREATE TABLE IF NOT EXISTS media_favorites (
+  member_id BIGINT NOT NULL,
+  media_id VARCHAR(36) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (member_id, media_id),
+  FOREIGN KEY (member_id) REFERENCES members(id),
+  FOREIGN KEY (media_id) REFERENCES media_files(id)
 );
 CREATE TABLE IF NOT EXISTS admin_sessions (
   token_hash VARCHAR(64) PRIMARY KEY,

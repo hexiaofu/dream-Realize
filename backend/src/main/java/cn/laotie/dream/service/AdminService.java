@@ -6,6 +6,7 @@ import cn.laotie.dream.security.ModerationPolicy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -20,59 +21,67 @@ public class AdminService {
     private final JdbcTemplate jdbc;
     private final MediaService media;
     private final ModerationPolicy policy;
-    public AdminService(JdbcTemplate jdbc,MediaService media,ModerationPolicy policy) { this.jdbc=jdbc; this.media=media; this.policy=policy; }
+    private final CommentMediaService commentMedia;
+    public AdminService(JdbcTemplate jdbc,MediaService media,ModerationPolicy policy,CommentMediaService commentMedia) { this.jdbc=jdbc; this.media=media; this.policy=policy; this.commentMedia=commentMedia; }
     private void page(int page,int size) { Api.require(page>=1 && page<=100000 && size>=1 && size<=50,400,"分页参数不正确"); }
-    private boolean update(String type) { Api.require("DREAM".equals(type)||"UPDATE".equals(type),400,"内容类型不正确"); return "UPDATE".equals(type); }
+    private boolean child(String type) { Api.require(Arrays.asList("DREAM","UPDATE","COMMENT").contains(type),400,"内容类型不正确"); return !"DREAM".equals(type); }
+    private String table(String type) { return "COMMENT".equals(type)?"dream_comments":"UPDATE".equals(type)?"dream_updates":"dreams"; }
+    private String moderationTable(String type) { return "COMMENT".equals(type)?"comment_moderation":"UPDATE".equals(type)?"update_moderation":"dream_moderation"; }
+    private String moderationColumn(String type) { return "COMMENT".equals(type)?"comment_id":"UPDATE".equals(type)?"update_id":"dream_id"; }
     private Map<String,Object> result(List<Map<String,Object>> items,long total,int page,int size) { return Api.map("items",items,"total",total,"page",page,"size",size); }
     public Object overview() {
         return Api.map("dreams",jdbc.queryForObject("SELECT COUNT(*) FROM dreams",Long.class),
-            "hidden",jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM dream_moderation WHERE hidden=TRUE)+(SELECT COUNT(*) FROM update_moderation WHERE hidden=TRUE)",Long.class),
+            "hidden",jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM dream_moderation WHERE hidden=TRUE)+(SELECT COUNT(*) FROM update_moderation WHERE hidden=TRUE)+(SELECT COUNT(*) FROM comment_moderation cm JOIN dream_comments c ON c.id=cm.comment_id WHERE cm.hidden=TRUE AND c.deleted=FALSE)",Long.class),
             "members",jdbc.queryForObject("SELECT COUNT(*) FROM members m WHERE NOT EXISTS (SELECT 1 FROM administrators a WHERE a.member_id=m.id)",Long.class),
             "restricted",jdbc.queryForObject("SELECT COUNT(*) FROM member_restrictions WHERE mode<>'NORMAL' AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)",Long.class));
     }
-    private String contentFrom(boolean updates) {
-        return updates?" FROM dream_updates u JOIN dreams d ON d.id=u.dream_id JOIN members m ON m.id=d.member_id LEFT JOIN update_moderation c ON c.update_id=u.id ":
+    private String contentFrom(String type) {
+        if("COMMENT".equals(type)) return " FROM dream_comments u JOIN dreams d ON d.id=u.dream_id JOIN members m ON m.id=u.member_id LEFT JOIN comment_moderation c ON c.comment_id=u.id ";
+        return "UPDATE".equals(type)?" FROM dream_updates u JOIN dreams d ON d.id=u.dream_id JOIN members m ON m.id=d.member_id LEFT JOIN update_moderation c ON c.update_id=u.id ":
             " FROM dreams d JOIN members m ON m.id=d.member_id LEFT JOIN dream_moderation c ON c.dream_id=d.id ";
     }
-    private List<Map<String,Object>> contentRows(boolean updates,String where,Object... args) {
-        String alias=updates?"u":"d";
-        return jdbc.query("SELECT "+alias+".id,d.id dream_id,d.title,"+(updates?"u.content":"d.story")+" body,d.member_id,m.username,m.nickname,d.anonymous,"+alias+".created_at,COALESCE(c.hidden,FALSE) hidden,c.reason,"+
-            "EXISTS(SELECT 1 FROM dream_moderation parent WHERE parent.dream_id=d.id AND parent.hidden=TRUE) parent_hidden"+contentFrom(updates)+where,(rs,n)->Api.map(
-            "id",rs.getLong("id"),"type",updates?"UPDATE":"DREAM","dreamId",rs.getLong("dream_id"),"title",rs.getString("title"),"body",rs.getString("body"),
+    private List<Map<String,Object>> contentRows(String type,String where,Object... args) {
+        boolean child=child(type),comment="COMMENT".equals(type); String alias=child?"u":"d";
+        String anonymous=comment?"(u.anonymous=TRUE OR (d.anonymous=TRUE AND u.member_id=d.member_id))":"d.anonymous";
+        return jdbc.query("SELECT "+alias+".id,d.id dream_id,d.title,"+(child?"u.content":"d.story")+" body,m.id member_id,m.username,m.nickname,"+anonymous+" anonymous,"+(comment?"u.deleted":"FALSE")+" deleted,"+alias+".created_at,COALESCE(c.hidden,FALSE) hidden,c.reason,"+
+            "EXISTS(SELECT 1 FROM dream_moderation parent WHERE parent.dream_id=d.id AND parent.hidden=TRUE) parent_hidden"+contentFrom(type)+where,(rs,n)->Api.map(
+            "id",rs.getLong("id"),"type",type,"dreamId",rs.getLong("dream_id"),"title",rs.getString("title"),"body",rs.getString("body"),
             "memberId",rs.getLong("member_id"),"username",rs.getString("username"),"nickname",rs.getString("nickname"),"anonymous",rs.getBoolean("anonymous"),
-            "hidden",rs.getBoolean("hidden"),"parentHidden",updates && rs.getBoolean("parent_hidden"),"reason",rs.getString("reason"),"createdAt",rs.getTimestamp("created_at").toLocalDateTime().toString()),args);
+            "hidden",rs.getBoolean("hidden"),"deleted",rs.getBoolean("deleted"),"parentHidden",child && rs.getBoolean("parent_hidden"),"reason",rs.getString("reason"),"createdAt",rs.getTimestamp("created_at").toLocalDateTime().toString()),args);
     }
     public Object contents(String type,String keyword,String state,int page,int size) {
-        boolean updates=update(type); page(page,size);
+        boolean child=child(type); page(page,size);
         Api.require(keyword.length()<=100,400,"搜索词最多 100 字");
         Api.require(Arrays.asList("ALL","VISIBLE","HIDDEN").contains(state),400,"状态不正确");
         String where=" WHERE 1=1"; List<Object> args=new ArrayList<>();
         if(!keyword.trim().isEmpty()) {
-            where+=" AND (d.title LIKE ? OR "+(updates?"u.content":"d.story")+" LIKE ? OR m.username LIKE ? OR m.nickname LIKE ?)";
+            where+=" AND (d.title LIKE ? OR "+(child?"u.content":"d.story")+" LIKE ? OR m.username LIKE ? OR m.nickname LIKE ?)";
             for(int i=0;i<4;i++) args.add("%"+keyword.trim()+"%");
         }
         if(!"ALL".equals(state)) {
-            String hidden="(COALESCE(c.hidden,FALSE)=TRUE"+(updates?" OR NOT "+ModerationPolicy.VISIBLE_DREAM:"")+")";
+            String hidden="(COALESCE(c.hidden,FALSE)=TRUE"+(child?" OR NOT "+ModerationPolicy.VISIBLE_DREAM:"")+("COMMENT".equals(type)?" OR u.deleted=TRUE":"")+")";
             where+=" AND "+("HIDDEN".equals(state)?hidden:"NOT "+hidden);
         }
-        long total=jdbc.queryForObject("SELECT COUNT(*)"+contentFrom(updates)+where,Long.class,args.toArray());
+        long total=jdbc.queryForObject("SELECT COUNT(*)"+contentFrom(type)+where,Long.class,args.toArray());
         args.add(size); args.add((page-1)*size);
-        return result(contentRows(updates,where+" ORDER BY "+(updates?"u":"d")+".id DESC LIMIT ? OFFSET ?",args.toArray()),total,page,size);
+        return result(contentRows(type,where+" ORDER BY "+(child?"u":"d")+".id DESC LIMIT ? OFFSET ?",args.toArray()),total,page,size);
     }
     public Object content(String type,long id) {
-        boolean updates=update(type);
-        List<Map<String,Object>> rows=contentRows(updates," WHERE "+(updates?"u":"d")+".id=?",id);
-        Api.require(!rows.isEmpty(),404,"内容不存在"); media.addTo(rows,updates);
+        boolean child=child(type);
+        List<Map<String,Object>> rows=contentRows(type," WHERE "+(child?"u":"d")+".id=?",id);
+        Api.require(!rows.isEmpty(),404,"内容不存在");
+        if("COMMENT".equals(type)) commentMedia.addTo(rows,null,true); else media.addTo(rows,child);
         Map<String,Object> item=rows.get(0);
         item.put("restriction",policy.restriction(((Number)item.get("memberId")).longValue()));
         return item;
     }
-    @Transactional public Object moderate(String type,long id,long adminId,AdminRequests.Content input) {
-        boolean updates=update(type);
-        List<Long> ids=jdbc.query(updates?"SELECT dream_id FROM dream_updates WHERE id=?":"SELECT id FROM dreams WHERE id=?",(rs,n)->rs.getLong(1),id);
+    @Transactional(isolation=Isolation.READ_COMMITTED) public Object moderate(String type,long id,long adminId,AdminRequests.Content input) {
+        boolean child=child(type);
+        List<Long> ids=jdbc.query("SELECT "+(child?"dream_id":"id")+" FROM "+table(type)+" WHERE id=?",(rs,n)->rs.getLong(1),id);
         Api.require(!ids.isEmpty(),404,"内容不存在");
         jdbc.queryForObject("SELECT id FROM dreams WHERE id=? FOR UPDATE",Long.class,ids.get(0));
-        String table=updates?"update_moderation":"dream_moderation",column=updates?"update_id":"dream_id";
+        if("COMMENT".equals(type)) Api.require(!jdbc.queryForObject("SELECT deleted FROM dream_comments WHERE id=? FOR UPDATE",Boolean.class,id),409,"评论已被作者删除");
+        String table=moderationTable(type),column=moderationColumn(type);
         List<Boolean> state=jdbc.query("SELECT hidden FROM "+table+" WHERE "+column+"=?",(rs,n)->rs.getBoolean(1),id);
         boolean hidden=!state.isEmpty() && state.get(0);
         Api.require(input.expectedHidden==hidden,409,"内容状态已变化，请刷新后操作");

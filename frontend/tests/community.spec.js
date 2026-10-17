@@ -1,13 +1,11 @@
 /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
 const { test, expect } = require('@playwright/test')
+const { registrationConsent } = require('./helpers/registration')
 const api = process.env.API_TEST_URL || 'http://127.0.0.1:18080/api'
 const password = 'BrowserTest123!'
-const correct = [1, 2, 0, 1, 2, 0, 1, 2]
 async function createMember(request, prefix) {
-  const answers = Object.fromEntries(correct.map((value, i) => [i + 1, value]))
-  const exam = await (await request.post(api + '/admission/check', { data: { answers } })).json()
   const username = prefix + Date.now().toString(36)
-  const response = await request.post(api + '/auth/register', { data: { username, password, nickname: prefix + '梦想家', admissionToken: exam.data.admissionToken } })
+  const response = await request.post(api + '/auth/register', { data: { username, password, nickname: prefix + '梦想家', ...await registrationConsent(request, api) } })
   expect(response.ok()).toBeTruthy()
   return { ...(await response.json()).data, username }
 }
@@ -16,23 +14,40 @@ async function login(page, username) {
   await page.locator('.wd-input').filter({ hasText: '账号' }).locator('input').fill(username)
   await page.locator('.wd-input').filter({ hasText: '密码' }).locator('input').fill(password)
   await page.locator('.wd-button').filter({ hasText: /^登录圆梦$/ }).click()
-  await expect(page).not.toHaveURL(/auth\/index/)
+  await expect(page).not.toHaveURL(/pages\/auth\//)
 }
-test('入门考试可完成并创建真实账号', async ({ page }) => {
-  await page.goto('/#/pages/auth/index')
-  await page.getByText('加入社区', { exact: true }).click()
-  await expect(page.locator('.wd-radio-group')).toHaveCount(8)
-  const groups = page.locator('.wd-radio-group')
-  for (let i = 0; i < 8; i++) await groups.nth(i).locator('.wd-radio').nth(correct[i]).click()
-  await page.locator('.wd-button').filter({ hasText: /^完成入门问答$/ }).click()
-  await expect(page.getByText('成为社区成员', { exact: true })).toBeVisible()
+test('阅读并同意声明即可注册，无需先答题', async ({ page }) => {
+  await page.goto('/#/pages/publish/index')
+  await page.locator('.wd-input').filter({ hasText: '一句话心愿' }).locator('input').fill('注册后继续写梦想')
+  await page.locator('.wd-button').filter({ hasText: /^加入社区，发布梦想$/ }).click()
+  await expect(page).toHaveURL(/auth\/index/)
+  await expect(page.locator('.wd-segmented')).toHaveCount(0)
+  await page.locator('.auth-alternative .wd-button').filter({ hasText: /^注册账号$/ }).click()
+  await expect(page).toHaveURL(/auth\/register/)
+  await page.locator('.auth-alternative .wd-button').filter({ hasText: /^去登录$/ }).click()
+  await expect(page).toHaveURL(/auth\/index/)
+  await page.locator('.auth-alternative .wd-button').filter({ hasText: /^注册账号$/ }).click()
+  await expect(page).toHaveURL(/auth\/register/)
+  await expect(page.locator('.wd-segmented')).toHaveCount(0)
+  await expect(page.locator('.wd-radio-group')).toHaveCount(0)
+  await expect(page.getByText('注册账号', { exact: true })).toBeVisible()
   await page.locator('.wd-input').filter({ hasText: '账号' }).locator('input').fill('exam' + Date.now().toString(36))
   await page.locator('.wd-input').filter({ hasText: '密码' }).locator('input').fill(password)
   await page.locator('.wd-input').filter({ hasText: '昵称' }).locator('input').fill('浏览器新成员')
-  await page.locator('.wd-button').filter({ hasText: /^成为社区成员$/ }).click()
-  await expect(page).not.toHaveURL(/auth\/index/)
+  const consent = page.locator('.registration-notice .wd-checkbox')
+  await expect(consent).toHaveClass(/is-disabled/)
+  await page.locator('.wd-button').filter({ hasText: /^查看完整声明$/ }).click()
+  await page.locator('.registration-notice-popup .wd-button').filter({ hasText: /^阅读完成$/ }).click()
+  await expect(consent).not.toHaveClass(/is-checked/)
+  await expect(page.locator('.wd-button').filter({ hasText: /^注册账号$/ })).toHaveClass(/is-disabled/)
+  await consent.click()
+  await page.locator('.wd-button').filter({ hasText: /^注册账号$/ }).click()
+  await expect(page).toHaveURL(/pages\/publish\/index/)
+  await expect(page.locator('.wd-input').filter({ hasText: '一句话心愿' }).locator('input')).toHaveValue('注册后继续写梦想')
+  await expect(page.locator('.wd-button').filter({ hasText: /^发布我的梦想$/ })).toBeVisible()
   await page.goto('/#/pages/me/index')
   await expect(page.getByText('浏览器新成员', { exact: true })).toBeVisible()
+  await expect(page.locator('.wd-cell').filter({ hasText: '评论资格' })).toContainText('去答题')
 })
 test('匿名现金梦想：发布、无偿帮助、双方聊天、接受、记录圆梦', async ({ page, browser, request }) => {
   const owner = await createMember(request, 'owner')

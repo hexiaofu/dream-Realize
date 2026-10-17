@@ -1,5 +1,6 @@
 /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
 const { test, expect } = require('@playwright/test')
+const { registrationConsent } = require('./helpers/registration')
 const fs = require('node:fs')
 const path = require('node:path')
 const api = process.env.API_TEST_URL || 'http://127.0.0.1:18080/api'
@@ -8,9 +9,7 @@ test('个人资料：默认头像、上传重试、保存持久化、取消和�
   test.setTimeout(90000)
   const errors = []; page.on('pageerror', error => errors.push(error.message))
   const username = 'profile' + Date.now().toString(36), password = 'ProfileBrowser123!'
-  const answers = Object.fromEntries([1, 2, 0, 1, 2, 0, 1, 2].map((value, i) => [i + 1, value]))
-  const exam = await (await request.post(api + '/admission/check', { data: { answers } })).json()
-  const registered = await request.post(api + '/auth/register', { data: { username, password, nickname: '头像测试成员', admissionToken: exam.data.admissionToken } })
+  const registered = await request.post(api + '/auth/register', { data: { username, password, nickname: '头像测试成员', ...await registrationConsent(request, api) } })
   expect(registered.ok()).toBeTruthy()
   const member = (await registered.json()).data
   const headers = { Authorization: 'Bearer ' + member.token }

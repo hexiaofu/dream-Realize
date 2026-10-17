@@ -54,10 +54,9 @@ public class MediaIntegrationTest {
         return json.readTree(mvc.perform(builder).andExpect(status().is(statusCode)).andReturn().getResponse().getContentAsString()).path("data");
     }
     private String member(String name) throws Exception {
-        Map<String,Integer> answers=new LinkedHashMap<>(); int[] values={1,2,0,1,2,0,1,2};
-        for(int i=0;i<values.length;i++) answers.put(String.valueOf(i+1),values[i]);
-        String pass=call(post("/api/admission/check"),Api.map("answers",answers),200).path("admissionToken").asText();
-        return "Bearer "+call(post("/api/auth/register"),Api.map("username",name,"nickname",name,"password","MediaTest123!","admissionToken",pass),200).path("token").asText();
+        JsonNode notice=call(get("/api/legal/registration-notice"),null,200);
+        return "Bearer "+call(post("/api/auth/register"),Api.map("username",name,"nickname",name,"password","MediaTest123!",
+            "noticeAccepted",true,"noticeVersion",notice.path("version").asText(),"noticeSha256",notice.path("sha256").asText()),200).path("token").asText();
     }
     private byte[] picture() throws IOException {
         ByteArrayOutputStream output=new ByteArrayOutputStream();

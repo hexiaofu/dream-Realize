@@ -23,8 +23,9 @@ public class DreamService {
     private final JdbcTemplate jdbc;
     private final MediaService media;
     private final ModerationPolicy policy;
+    private final InteractionService interactions;
     private static final String SELECT = "SELECT d.*,m.nickname,"+AvatarService.filenameSql("m")+" avatar_filename,COALESCE(dm.hidden,FALSE) hidden,dm.reason moderation_reason,(SELECT COUNT(*) FROM help_requests h WHERE h.dream_id=d.id AND h.status='ACCEPTED') helper_count FROM dreams d JOIN members m ON m.id=d.member_id LEFT JOIN dream_moderation dm ON dm.dream_id=d.id ";
-    public DreamService(JdbcTemplate jdbc,MediaService media,ModerationPolicy policy) { this.jdbc=jdbc; this.media=media; this.policy=policy; }
+    public DreamService(JdbcTemplate jdbc,MediaService media,ModerationPolicy policy,InteractionService interactions) { this.jdbc=jdbc; this.media=media; this.policy=policy; this.interactions=interactions; }
     public Object list(String keyword,String category,String helpType,String status,int page,int size,Long viewer,boolean mine) {
         Api.require(page>=1 && page<=100000 && size>=1 && size<=30,400,"分页参数不正确");
         Api.require(keyword==null || keyword.length()<=100,400,"搜索词最多 100 字");
@@ -42,6 +43,7 @@ public class DreamService {
         args.add(size); args.add((page-1)*size);
         List<Map<String,Object>> items=jdbc.query(SELECT+where+" ORDER BY d.created_at DESC,d.id DESC LIMIT ? OFFSET ?",(rs,row)->view(rs,viewer),args.toArray());
         media.addTo(items,false);
+        interactions.addTo(items,viewer);
         for(Map<String,Object> item:items) if(Boolean.TRUE.equals(item.get("hidden"))) { item.put("story",""); item.put("media",Collections.emptyList()); }
         return Api.map("items",items,"total",total,"page",page,"size",size,"hasMore",(long)page*size<total);
     }
@@ -64,6 +66,7 @@ public class DreamService {
         Api.require(!rows.isEmpty(),404,"这个梦想不存在");
         Map<String,Object> result=rows.get(0);
         media.addTo(rows,false);
+        interactions.addTo(rows,viewer);
         List<Map<String,Object>> updates=jdbc.query("SELECT u.id,u.content,u.created_at FROM dream_updates u WHERE u.dream_id=? AND "+ModerationPolicy.VISIBLE_UPDATE+" ORDER BY u.id DESC",(rs,row)->Api.map("id",rs.getLong("id"),"content",rs.getString("content"),"createdAt",rs.getTimestamp("created_at").toLocalDateTime().toString()),id);
         media.addTo(updates,true);
         result.put("updates",updates);
@@ -109,12 +112,13 @@ public class DreamService {
             "completed",jdbc.queryForObject("SELECT COUNT(*) FROM dreams d WHERE status='COMPLETED' AND "+ModerationPolicy.VISIBLE_DREAM,Long.class),
             "connections",jdbc.queryForObject("SELECT COUNT(*) FROM help_requests h JOIN dreams d ON d.id=h.dream_id WHERE h.status='ACCEPTED' AND "+ModerationPolicy.VISIBLE_DREAM,Long.class));
     }
-    public Object publicProfile(long id) {
+    public Object publicProfile(long id,Long viewer) {
         List<Map<String,Object>> members=jdbc.query("SELECT nickname,bio,skills,city,"+AvatarService.filenameSql("m")+" avatar_filename FROM members m WHERE id=?",(rs,row)->Api.map("id",id,"nickname",rs.getString(1),"bio",rs.getString(2),"skills",rs.getString(3),"city",rs.getString(4),"avatarUrl",AvatarService.url(rs.getString("avatar_filename"))),id);
         Api.require(!members.isEmpty(),404,"成员不存在");
         Map<String,Object> profile=members.get(0);
-        List<Map<String,Object>> dreams=jdbc.query(SELECT+" WHERE d.member_id=? AND d.anonymous=FALSE AND "+ModerationPolicy.VISIBLE_DREAM+" ORDER BY d.id DESC LIMIT 30",(rs,row)->view(rs,null),id);
+        List<Map<String,Object>> dreams=jdbc.query(SELECT+" WHERE d.member_id=? AND d.anonymous=FALSE AND "+ModerationPolicy.VISIBLE_DREAM+" ORDER BY d.id DESC LIMIT 30",(rs,row)->view(rs,viewer),id);
         media.addTo(dreams,false);
+        interactions.addTo(dreams,viewer);
         profile.put("dreams",dreams);
         return profile;
     }

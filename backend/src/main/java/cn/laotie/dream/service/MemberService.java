@@ -24,14 +24,16 @@ public class MemberService {
     private final Sessions sessions;
     private final ModerationPolicy policy;
     private final AvatarService avatars;
+    private final RegistrationNoticeService notice;
+    private final AdmissionService admission;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-    public MemberService(JdbcTemplate jdbc, Sessions sessions,ModerationPolicy policy,AvatarService avatars) { this.jdbc=jdbc; this.sessions=sessions; this.policy=policy; this.avatars=avatars; }
+    public MemberService(JdbcTemplate jdbc, Sessions sessions,ModerationPolicy policy,AvatarService avatars,RegistrationNoticeService notice,AdmissionService admission) { this.jdbc=jdbc; this.sessions=sessions; this.policy=policy; this.avatars=avatars; this.notice=notice; this.admission=admission; }
     @Transactional public Object register(Requests.Register input) {
+        notice.validate(input);
         Api.require(input.password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length<=72,400,"密码 UTF-8 编码长度最多 72 字节");
         Api.require(jdbc.queryForObject("SELECT COUNT(*) FROM members WHERE username=?",Integer.class,input.username.toLowerCase(Locale.ROOT))==0,409,"账号已被使用");
-        int consumed=jdbc.update("UPDATE admission_passes SET used=TRUE WHERE token_hash=? AND used=FALSE AND expires_at>CURRENT_TIMESTAMP",sessions.hash(input.admissionToken));
-        Api.require(consumed==1,400,"入门问答凭证已失效，请重新答题");
         long id=insertMember(input.username.toLowerCase(Locale.ROOT),input.password,input.nickname.trim());
+        notice.record(id);
         return Api.map("token",sessions.create(id),"user",me(id));
     }
     public long insertMember(String username,String password,String nickname) {
@@ -57,7 +59,7 @@ public class MemberService {
         Map<String,Object> member=jdbc.queryForObject("SELECT m.*,a.media_id,f.file_name FROM members m LEFT JOIN member_avatars a ON a.member_id=m.id LEFT JOIN media_files f ON f.id=a.media_id WHERE m.id=?",(rs,row)->Api.map(
             "id",rs.getLong("id"),"username",rs.getString("username"),"nickname",rs.getString("nickname"),"bio",rs.getString("bio"),"skills",rs.getString("skills"),"city",rs.getString("city"),
             "avatarId",clean(rs.getString("media_id")),"avatarUrl",AvatarService.url(rs.getString("file_name"))),id);
-        member.put("restriction",policy.restriction(id)); return member;
+        member.put("restriction",policy.restriction(id)); member.put("commentQualification",admission.status(id)); return member;
     }
     @Transactional public Object update(long id,Requests.Profile input) {
         policy.writeAllowed(id);

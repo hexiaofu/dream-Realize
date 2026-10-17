@@ -7,7 +7,10 @@
     { "path": "pages/inbox/index", "style": { "navigationBarTitleText": "消息" } },
     { "path": "pages/me/index", "style": { "navigationBarTitleText": "我的" } },
     { "path": "pages/dream/detail", "style": { "navigationBarTitleText": "梦想详情" } },
-    { "path": "pages/auth/index", "style": { "navigationBarTitleText": "加入圆梦" } },
+    { "path": "pages/auth/index", "style": { "navigationBarTitleText": "登录圆梦" } },
+    { "path": "pages/auth/register", "style": { "navigationBarTitleText": "注册账号" } },
+    { "path": "pages/admission/index", "style": { "navigationBarTitleText": "评论资格问答" } },
+    { "path": "pages/legal/notice", "style": { "navigationBarTitleText": "免责声明" } },
     { "path": "pages/chat/index", "style": { "navigationBarTitleText": "圆梦交流" } },
     { "path": "pages/profile/index", "style": { "navigationBarTitleText": "梦想名片" } }
   ],

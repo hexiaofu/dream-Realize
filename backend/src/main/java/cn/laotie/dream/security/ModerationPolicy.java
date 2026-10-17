@@ -15,6 +15,9 @@ import java.util.*;
 public class ModerationPolicy {
     public static final String VISIBLE_DREAM="NOT EXISTS (SELECT 1 FROM dream_moderation dm WHERE dm.dream_id=d.id AND dm.hidden=TRUE)";
     public static final String VISIBLE_UPDATE="NOT EXISTS (SELECT 1 FROM update_moderation um WHERE um.update_id=u.id AND um.hidden=TRUE)";
+    public static final String VISIBLE_COMMENT="c.deleted=FALSE AND NOT EXISTS (SELECT 1 FROM comment_moderation cm WHERE cm.comment_id=c.id AND cm.hidden=TRUE)";
+    // f 为固定别名；任一引用被审核下架都会阻断文件，普通删除转发不影响来源图片。
+    public static final String VISIBLE_COMMENT_MEDIA="NOT EXISTS (SELECT 1 FROM comment_attachments attachment JOIN dream_comments c ON c.id=attachment.comment_id JOIN dreams d ON d.id=c.dream_id WHERE attachment.media_id=f.id AND ((attachment.is_source=TRUE AND c.deleted=TRUE) OR EXISTS (SELECT 1 FROM comment_moderation cm WHERE cm.comment_id=c.id AND cm.hidden=TRUE) OR NOT ("+VISIBLE_DREAM+")))";
     private final JdbcTemplate jdbc;
     public ModerationPolicy(JdbcTemplate jdbc) { this.jdbc=jdbc; }
     public Map<String,Object> restriction(long id) {
@@ -38,5 +41,8 @@ public class ModerationPolicy {
     public void dreamAvailable(long id) { Api.require(!hiddenDream(id),404,"内容已下架"); }
     public boolean hiddenMedia(Long dreamId,Long updateId) {
         return dreamId!=null && (hiddenDream(dreamId) || (updateId!=null && jdbc.queryForObject("SELECT COUNT(*) FROM update_moderation WHERE update_id=? AND hidden=TRUE",Integer.class,updateId)>0));
+    }
+    public boolean hiddenCommentMedia(String id) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM media_files f WHERE f.id=? AND NOT ("+VISIBLE_COMMENT_MEDIA+")",Integer.class,id)>0;
     }
 }

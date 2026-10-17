@@ -130,13 +130,13 @@ public class MediaService {
     public ResponseEntity<Resource> readForAdmin(String filename) { return read(filename,true); }
     private ResponseEntity<Resource> read(String filename,boolean admin) {
         Api.require(filename.matches("[a-f0-9-]{36}\\.(jpg|png|gif|webp|mp4|webm)"),404,"文件不存在");
-        List<Map<String,Object>> rows=jdbc.queryForList("SELECT content_type,dream_id,update_id FROM media_files WHERE file_name=?",filename);
+        List<Map<String,Object>> rows=jdbc.queryForList("SELECT id,content_type,dream_id,update_id FROM media_files WHERE file_name=?",filename);
         Path path=root.resolve(filename);
         Api.require(!rows.isEmpty() && Files.isRegularFile(path),404,"文件不存在");
         Map<String,Object> row=rows.get(0);
         Long dreamId=row.get("dream_id")==null?null:((Number)row.get("dream_id")).longValue();
         Long updateId=row.get("update_id")==null?null:((Number)row.get("update_id")).longValue();
-        Api.require(admin || !policy.hiddenMedia(dreamId,updateId),404,"文件已下架");
+        Api.require(admin || (!policy.hiddenMedia(dreamId,updateId) && !policy.hiddenCommentMedia(String.valueOf(row.get("id")))),404,"文件已下架");
         // ResourceHttpMessageConverter/ResourceRegionHttpMessageConverter 负责 Range，支持视频拖动播放。
         return ResponseEntity.ok().header("Content-Type",String.valueOf(rows.get(0).get("content_type")))
             .header("X-Content-Type-Options","nosniff").header("Cache-Control","no-store")
@@ -150,6 +150,7 @@ public class MediaService {
         Api.require(((Number)row.get("member_id")).longValue()==memberId,403,"只能移除自己上传的附件");
         Api.require(row.get("dream_id")==null,409,"已经发布的附件不能从上传区移除");
         requireNotAvatar(id);
+        requireNotCommentMedia(id);
         Files.deleteIfExists(root.resolve(String.valueOf(row.get("file_name"))));
         jdbc.update("DELETE FROM media_files WHERE id=?",id);
     }
@@ -165,6 +166,7 @@ public class MediaService {
             Api.require(((Number)row.get("member_id")).longValue()==memberId,403,"只能使用自己上传的附件");
             Api.require(row.get("dream_id")==null,409,"附件已经发布，请重新上传");
             requireNotAvatar(id);
+            requireNotCommentMedia(id);
             if("IMAGE".equals(row.get("kind"))) images++; else videos++;
         }
         Api.require(images<=9 && videos<=1,400,"每次最多 9 张图片和 1 个视频");
@@ -172,6 +174,9 @@ public class MediaService {
     }
     private void requireNotAvatar(String id) {
         Api.require(jdbc.queryForList("SELECT member_id FROM member_avatars WHERE media_id=? FOR UPDATE",id).isEmpty(),409,"图片正在用作头像，请重新上传附件");
+    }
+    private void requireNotCommentMedia(String id) {
+        Api.require(jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM comment_attachments WHERE media_id=?)+(SELECT COUNT(*) FROM media_favorites WHERE media_id=?)",Integer.class,id,id)==0,409,"图片已用于评论或收藏，不能移除或改作附件");
     }
     public void addTo(List<Map<String,Object>> entries,boolean updates) {
         if(entries.isEmpty()) return;

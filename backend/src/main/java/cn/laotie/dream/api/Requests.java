@@ -16,14 +16,17 @@ public final class Requests {
     private Requests() { }
     /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
     public static class Exam {
-        @NotNull(message="请完成所有题目") @Size(min=8, max=8, message="请完成全部 8 道题") public Map<String, Integer> answers;
+        @NotNull(message="请完成所有题目") @Size(min=10, max=10, message="请完成全部 10 道题") public Map<String, Integer> answers;
+        @NotBlank(message="请重新加载题目") @Size(max=40) public String examVersion;
     }
     /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
     public static class Register {
         @NotBlank(message="请输入账号") @Pattern(regexp="[a-zA-Z0-9_]{4,32}", message="账号应为 4–32 位字母、数字或下划线") public String username;
         @NotBlank(message="请输入密码") @Size(min=8,max=64,message="密码长度为 8–64 位") public String password;
         @NotBlank(message="请输入昵称") @Size(max=30,message="昵称最多 30 字") public String nickname;
-        @NotBlank(message="请先通过入门问答") @Size(max=100) public String admissionToken;
+        @NotNull(message="请阅读并同意免责声明与线下交流风险告知") @AssertTrue(message="请阅读并同意免责声明与线下交流风险告知") public Boolean noticeAccepted;
+        @NotBlank(message="请重新加载注册声明") @Size(max=40) public String noticeVersion;
+        @NotBlank(message="请重新加载注册声明") @Pattern(regexp="[a-f0-9]{64}",message="请重新加载注册声明") public String noticeSha256;
     }
     /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
     public static class Login {
@@ -74,5 +77,23 @@ public final class Requests {
     /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
     public static class Message {
         @NotBlank(message="请输入消息") @Size(max=2000,message="消息最多 2000 字") public String content;
+    }
+    /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+    public static class Reaction {
+        @NotBlank @Pattern(regexp="SUPPORT|DISAGREE|NONE",message="请选择精神支持或不同意") public String reaction;
+    }
+    /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+    public static class Comment {
+        @NotNull @Size(max=2000,message="评论最多 1000 字") public String content = "";
+        @NotNull @Size(max=9,message="评论最多 9 张图片")
+        public List<@NotNull @Pattern(regexp="[a-f0-9-]{36}",message="附件编号无效") String> mediaIds = new ArrayList<>();
+        public List<String> getMediaIds() { return mediaIds; }
+        @AssertTrue(message="请输入评论或选择图片") public boolean isNotEmpty() {
+            return content!=null && (!content.trim().isEmpty() || (mediaIds!=null && !mediaIds.isEmpty()));
+        }
+        @AssertTrue(message="评论最多 1000 字") public boolean isWithinLimit() {
+            return content==null || content.codePointCount(0,content.length())<=1000;
+        }
+        public boolean anonymous;
     }
 }

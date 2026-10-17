@@ -33,6 +33,7 @@ public class AvatarService {
             Api.require(((Number)file.get("member_id")).longValue()==memberId,403,"只能使用自己上传的头像");
             Api.require("IMAGE".equals(file.get("kind")),400,"头像请选择图片");
             Api.require(file.get("dream_id")==null,409,"该图片已用于发布内容，请重新上传头像");
+            Api.require(jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM comment_attachments WHERE media_id=?)+(SELECT COUNT(*) FROM media_favorites WHERE media_id=?)",Integer.class,mediaId,mediaId)==0,409,"该图片已用于评论或收藏，请重新上传头像");
         }
         jdbc.update("DELETE FROM member_avatars WHERE member_id=?",memberId);
         if(!mediaId.isEmpty()) jdbc.update("INSERT INTO member_avatars(member_id,media_id) VALUES(?,?)",memberId,mediaId);

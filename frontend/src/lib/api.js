@@ -23,7 +23,8 @@ export function request(path, method = 'GET', data = undefined) {
       success(res) {
         if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.code === 0) return resolve(res.data.data)
         if (res.statusCode === 401) clearSession()
-        reject(new Error(res.data?.message || '请求未成功，请稍后重试'))
+        const error = new Error(res.data?.message || '请求未成功，请稍后重试')
+        error.status = res.statusCode; reject(error)
       }, fail() { reject(new Error('暂时连接不到服务，请检查网络后重试')) }
     })
   })

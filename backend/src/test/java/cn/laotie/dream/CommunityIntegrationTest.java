@@ -33,27 +33,28 @@ public class CommunityIntegrationTest {
         if(body!=null) request.contentType("application/json").content(json.writeValueAsBytes(body));
         return json.readTree(mvc.perform(request).andExpect(status().is(expected)).andReturn().getResponse().getContentAsString()).path("data");
     }
-    private String pass() throws Exception {
-        Map<String,Integer> answers=new LinkedHashMap<>(); int[] values={1,2,0,1,2,0,1,2};
-        for(int i=0;i<values.length;i++) answers.put(String.valueOf(i+1),values[i]);
-        return call(post("/api/admission/check"),Api.map("answers",answers),200).path("admissionToken").asText();
-    }
     private JsonNode member(String name) throws Exception {
-        return call(post("/api/auth/register"),Api.map("username",name,"nickname",name+"昵称","password","Password123!","admissionToken",pass()),200);
+        return call(post("/api/auth/register"),registration(name),200);
+    }
+    private Map<String,Object> registration(String name) throws Exception {
+        JsonNode notice=call(get("/api/legal/registration-notice"),null,200);
+        return Api.map("username",name,"nickname",name+"昵称","password","Password123!",
+            "noticeAccepted",true,"noticeVersion",notice.path("version").asText(),"noticeSha256",notice.path("sha256").asText());
     }
     private String bearer(JsonNode user) { return "Bearer "+user.path("token").asText(); }
     private JsonNode dream(JsonNode user,boolean anonymous) throws Exception {
         return call(post("/api/dreams").header("Authorization",bearer(user)),Api.map("title","我想获得现金帮助","story","可以坦率表达的梦想","category","OTHER","helpType","CASH","targetAmount",1000,"anonymous",anonymous),200);
     }
-    @Test void examMustPassAndCredentialIsSingleUse() throws Exception {
+    @Test void registrationOnlyNeedsConsentAndDoesNotGrantCommentQualification() throws Exception {
         JsonNode questions=call(get("/api/admission/questions"),null,200);
         assertThat(questions.toString()).doesNotContain("correct","explanation");
-        Map<String,Integer> answers=new HashMap<>(); for(int i=1;i<=8;i++) answers.put(String.valueOf(i),0);
-        JsonNode failed=call(post("/api/admission/check"),Api.map("answers",answers),200);
-        assertThat(failed.path("passed").asBoolean()).isFalse(); assertThat(failed.hasNonNull("admissionToken")).isFalse();
-        call(post("/api/auth/register"),Api.map("username","member1","nickname","测试","password","Password123!","admissionToken","forged"),400);
-        String token=pass(); Map<String,Object> body=Api.map("username","member1","nickname","测试","password","Password123!","admissionToken",token);
-        call(post("/api/auth/register"),body,200); body.put("username","member2"); call(post("/api/auth/register"),body,400);
+        assertThat(questions.path("total").asInt()).isEqualTo(10);
+        assertThat(questions.path("passScore").asInt()).isEqualTo(90);
+        Map<String,Object> body=registration("member1");
+        body.put("admissionToken","forged"); body.put("commentQualification",Api.map("passed",true));
+        JsonNode member=call(post("/api/auth/register"),body,200);
+        assertThat(member.path("user").path("commentQualification").path("passed").asBoolean()).isFalse();
+        assertThat(dream(member,false).path("id").asLong()).isPositive();
     }
     @Test void anonymousIdentityNeverLeaksAcrossDiscoveryProfileHelpAndChat() throws Exception {
         JsonNode owner=member("owner1"), helper=member("helper1"), third=member("third1");

@@ -30,7 +30,7 @@
             <template #header>
               <el-form inline class="filters" @submit.prevent="search">
                 <template v-if="section !== 'logs'">
-                  <el-form-item v-if="section === 'contents'" label="内容"><el-radio-group v-model="filter.type" @change="search"><el-radio-button value="DREAM">梦想</el-radio-button><el-radio-button value="UPDATE">进展</el-radio-button></el-radio-group></el-form-item>
+                  <el-form-item v-if="section === 'contents'" label="内容"><el-radio-group v-model="filter.type" @change="search"><el-radio-button value="DREAM">梦想</el-radio-button><el-radio-button value="UPDATE">进展</el-radio-button><el-radio-button value="COMMENT">评论</el-radio-button></el-radio-group></el-form-item>
                   <el-form-item label="关键词"><el-input v-model="filter.keyword" placeholder="内容、账号或昵称" clearable maxlength="100" @clear="search" /></el-form-item>
                   <el-form-item label="状态"><el-select v-model="filter.state" style="width: 140px" @change="search"><el-option v-for="item in stateOptions" :key="item.value" v-bind="item" /></el-select></el-form-item>
                 </template>
@@ -41,12 +41,12 @@
             <el-table v-if="section === 'contents'" v-loading="loading" :data="items" stripe empty-text="暂无内容" row-key="id">
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="title" label="梦想" min-width="200" show-overflow-tooltip />
-              <el-table-column v-if="filter.type === 'UPDATE'" prop="body" label="进展" min-width="180" show-overflow-tooltip />
+              <el-table-column v-if="filter.type !== 'DREAM'" prop="body" :label="filter.type === 'COMMENT' ? '评论' : '进展'" min-width="180" show-overflow-tooltip />
               <el-table-column label="发布者" min-width="150"><template #default="{ row }"><div>{{ row.nickname }}</div><el-text size="small" type="info">{{ row.username }}</el-text><el-tag v-if="row.anonymous" type="info" size="small">匿名发布</el-tag></template></el-table-column>
-              <el-table-column label="状态" width="140"><template #default="{ row }"><el-tag :type="row.hidden ? 'danger' : row.parentHidden ? 'warning' : 'success'">{{ row.hidden ? '已下架' : row.parentHidden ? '梦想已下架' : '可见' }}</el-tag></template></el-table-column>
+              <el-table-column label="状态" width="140"><template #default="{ row }"><el-tag :type="row.hidden ? 'danger' : row.parentHidden ? 'warning' : 'success'">{{ row.deleted ? '作者已删除' : row.hidden ? '已下架' : row.parentHidden ? '梦想已下架' : '可见' }}</el-tag></template></el-table-column>
               <el-table-column prop="reason" label="处理原因" min-width="160" show-overflow-tooltip />
               <el-table-column label="发布时间" width="160"><template #default="{ row }">{{ date(row.createdAt) }}</template></el-table-column>
-              <el-table-column label="操作" width="180" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="inspect(row)">查看</el-button><el-button link :type="row.hidden ? 'success' : 'danger'" @click="openContentAction(row)">{{ row.hidden ? '恢复' : '下架' }}</el-button></template></el-table-column>
+              <el-table-column label="操作" width="180" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="inspect(row)">查看</el-button><el-button v-if="!row.deleted" link :type="row.hidden ? 'success' : 'danger'" @click="openContentAction(row)">{{ row.hidden ? '恢复' : '下架' }}</el-button></template></el-table-column>
             </el-table>
             <el-table v-else-if="section === 'members'" v-loading="loading" :data="items" stripe empty-text="暂无账号" row-key="id">
               <el-table-column prop="id" label="ID" width="80" /><el-table-column prop="username" label="账号" min-width="160" /><el-table-column prop="nickname" label="昵称" min-width="150" />
@@ -74,7 +74,7 @@
             <el-descriptions-item label="梦想">{{ detail.title }}</el-descriptions-item>
             <el-descriptions-item label="发布者">{{ detail.nickname }}（{{ detail.username }} / #{{ detail.memberId }}）<el-tag v-if="detail.anonymous" type="info">匿名发布</el-tag></el-descriptions-item>
             <el-descriptions-item label="发布时间">{{ date(detail.createdAt) }}</el-descriptions-item>
-            <el-descriptions-item label="内容状态">{{ detail.hidden ? '已下架' : detail.parentHidden ? '所属梦想已下架' : '可见' }}</el-descriptions-item>
+            <el-descriptions-item label="内容状态">{{ detail.deleted ? '作者已删除' : detail.hidden ? '已下架' : detail.parentHidden ? '所属梦想已下架' : '可见' }}</el-descriptions-item>
             <el-descriptions-item v-if="detail.reason" label="处理原因">{{ detail.reason }}</el-descriptions-item>
             <el-descriptions-item label="账号状态">{{ modes[detail.restriction.mode] }}</el-descriptions-item>
           </el-descriptions>
@@ -82,7 +82,7 @@
           <el-space wrap><el-image v-for="file in detail.media.filter(item => item.type === 'IMAGE')" :key="file.id" class="thumbnail" :src="mediaUrl(file.url)" fit="cover" :preview-src-list="detail.media.filter(item => item.type === 'IMAGE').map(item => mediaUrl(item.url))" :initial-index="detail.media.filter(item => item.type === 'IMAGE').indexOf(file)" preview-teleported /></el-space>
           <video v-for="file in detail.media.filter(item => item.type === 'VIDEO')" :key="file.id" :src="mediaUrl(file.url)" controls preload="metadata" class="video" />
           <el-divider />
-          <el-space><el-button :type="detail.hidden ? 'success' : 'danger'" @click="openContentAction(detail)">{{ detail.hidden ? '恢复内容' : '下架内容' }}</el-button><el-button @click="findMember(detail.username)">管理该账号</el-button></el-space>
+          <el-space><el-button v-if="!detail.deleted" :type="detail.hidden ? 'success' : 'danger'" @click="openContentAction(detail)">{{ detail.hidden ? '恢复内容' : '下架内容' }}</el-button><el-button @click="findMember(detail.username)">管理该账号</el-button></el-space>
         </template>
       </div>
     </el-drawer>
@@ -92,7 +92,7 @@
         <template v-if="actionKind === 'MEMBER' && action.mode !== 'NORMAL'">
           <el-form-item label="限制类型"><el-radio-group v-model="action.mode"><el-radio value="READ_ONLY">限制发布</el-radio><el-radio value="BLOCKED">封禁登录</el-radio></el-radio-group></el-form-item>
           <el-form-item label="时长"><el-select v-model="action.durationHours" class="full"><el-option label="1 天" :value="24" /><el-option label="7 天" :value="168" /><el-option label="30 天" :value="720" /><el-option label="长期" :value="0" /></el-select></el-form-item>
-          <el-form-item><el-text size="small" type="info">{{ action.mode === 'READ_ONLY' ? '限制发布、上传、帮助、发消息和修改资料。' : '禁止登录，并使已有用户会话失效。' }}</el-text></el-form-item>
+          <el-form-item><el-text size="small" type="info">{{ action.mode === 'READ_ONLY' ? '限制发布、上传、帮助、评论、表态、发消息和修改资料。' : '禁止登录，并使已有用户会话失效。' }}</el-text></el-form-item>
         </template>
         <el-form-item label="处理原因" required><el-input v-model="action.reason" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="填写处理原因" /></el-form-item>
         <el-space><el-button :disabled="saving" @click="actionOpen = false">取消</el-button><el-button type="primary" native-type="submit" :loading="saving">确认处理</el-button></el-space>
@@ -113,7 +113,7 @@ const detailOpen = ref(false), detailLoading = ref(false), detail = ref(null), a
 const action = reactive({ mode: 'READ_ONLY', durationHours: 168, reason: '' })
 const titles = { contents: '内容管理', members: '账号管理', logs: '操作日志' }
 const metrics = [{ key: 'dreams', label: '梦想总数' }, { key: 'hidden', label: '已下架内容' }, { key: 'members', label: '社区成员' }, { key: 'restricted', label: '受限账号' }]
-const stateOptions = computed(() => [{ label: '全部', value: 'ALL' }, ...(section.value === 'contents' ? [{ label: '可见', value: 'VISIBLE' }, { label: '已下架', value: 'HIDDEN' }] : Object.entries(modes).map(([value, label]) => ({ value, label })))])
+const stateOptions = computed(() => [{ label: '全部', value: 'ALL' }, ...(section.value === 'contents' ? [{ label: '可见', value: 'VISIBLE' }, { label: '不可见', value: 'HIDDEN' }] : Object.entries(modes).map(([value, label]) => ({ value, label })))])
 const actionTitle = computed(() => actionKind.value === 'MEMBER' ? action.mode === 'NORMAL' ? '解除账号限制' : '设置账号限制' : target.value?.hidden ? '恢复内容' : '下架内容')
 let sequence = 0, detailSequence = 0
 function failed(e) {

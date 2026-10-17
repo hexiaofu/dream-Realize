@@ -1,5 +1,6 @@
 /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
 const { test, expect } = require('@playwright/test')
+const { registrationConsent } = require('./helpers/registration')
 const fs = require('fs')
 const path = require('path')
 const api = process.env.API_TEST_URL || 'http://127.0.0.1:18080/api'
@@ -15,9 +16,7 @@ test('后台：下架恢复、图片复核、限发封禁、解除限制与操�
   await page.setViewportSize({ width: 1440, height: 1000 })
   const errors = []; page.on('pageerror', error => errors.push(error.message))
   const loginName = 'modui' + Date.now().toString(36), memberPassword = 'ModerationTest123!'
-  const answers = Object.fromEntries([1, 2, 0, 1, 2, 0, 1, 2].map((value, i) => [i + 1, value]))
-  const exam = await (await request.post(api + '/admission/check', { data: { answers } })).json()
-  const registered = await (await request.post(api + '/auth/register', { data: { username: loginName, nickname: '后台测试成员', password: memberPassword, admissionToken: exam.data.admissionToken } })).json()
+  const registered = await (await request.post(api + '/auth/register', { data: { username: loginName, nickname: '后台测试成员', password: memberPassword, ...await registrationConsent(request, api) } })).json()
   const member = registered.data, headers = { Authorization: 'Bearer ' + member.token }
   expect((await request.get(api + '/admin/members', { headers })).status()).toBe(401)
   await page.goto(adminUrl)

@@ -14,5 +14,5 @@ export const query = values => '?' + new URLSearchParams(values).toString()
 export const date = value => value ? value.replace('T', ' ').slice(0, 16) : '长期'
 export const modes = { NORMAL: '正常', READ_ONLY: '限制发布', BLOCKED: '封禁登录' }
 export const actions = { HIDE: '下架', RESTORE: '恢复', NORMAL: '解除限制', READ_ONLY: '限制发布', BLOCKED: '封禁登录' }
-export const types = { DREAM: '梦想', UPDATE: '进展', MEMBER: '账号' }
+export const types = { DREAM: '梦想', UPDATE: '进展', COMMENT: '评论', MEMBER: '账号' }
 export function mediaUrl(url) { return url?.startsWith('/api/media/') ? url.replace('/api/media/', '/api/admin/media/') : '' }
