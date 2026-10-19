@@ -1,16 +1,16 @@
 <template>
   <AppShell title="梦想详情" back>
     <wd-status-tip url-prefix="/static/status/" v-if="error" image="network" :tip="error"><template #bottom><wd-button @click="load">重试</wd-button></template></wd-status-tip>
-    <view v-else-if="!dream" class="center"><wd-loading /></view>
-    <view v-else class="dream-detail">
+    <DreamLoading v-else-if="!dream" text="正在靠近这个梦想" />
+    <view v-else class="dream-detail stagger">
       <wd-card custom-class="dream-summary" custom-style="padding:20px">
         <view class="row dream-tags"><wd-tag plain>{{ label(categories, dream.category) }}</wd-tag><wd-tag type="success" plain>{{ label(statuses, dream.status) }}</wd-tag><wd-tag v-if="dream.isOwner" type="warning" plain>我的梦想</wd-tag></view>
         <view class="dream-title">{{ dream.title }}</view>
         <wd-cell :border="false" :clickable="!dream.anonymous" value-align="left" custom-style="--wot-cell-padding:0" @click="!dream.anonymous && go('/pages/profile/index?id=' + dream.authorId)">
           <view class="dream-author">
             <UserAvatar :src="dream.authorAvatar" :size="40" />
-            <view class="grow"><wd-text :text="dream.authorName" bold color="#263e39" /><view class="muted dream-published">{{ date(dream.createdAt) }} 发布</view></view>
-            <wd-icon v-if="!dream.anonymous" name="arrow-right" color="#a6b1ad" />
+            <view class="grow"><wd-text :text="dream.authorName" bold color="#2A2350" /><view class="muted dream-published">{{ date(dream.createdAt) }} 发布</view></view>
+            <wd-icon v-if="!dream.anonymous" name="arrow-right" color="#B4AFCB" />
           </view>
         </wd-cell>
         <view v-if="dream.story" class="body-text dream-story">{{ dream.story }}</view>
@@ -18,13 +18,13 @@
         <view id="dream-reactions" class="actions"><DreamReactions :dream="dream" show-comments popup-comments @comments="commentsOpen = true" @change="updateInteractions" /></view>
       </wd-card>
       <wd-card title="帮助信息" custom-style="padding-bottom:8px">
-        <wd-cell-group border custom-style="--wot-cell-padding:0;--wot-cell-title-color:#7c8a86;--wot-cell-value-color:#263e39">
-          <wd-cell title="需要的帮助" title-width="96px" :value="label(helpTypes, dream.helpType)" />
-          <wd-cell title="帮助条件" title-width="96px" :value="dream.rewardType === 'FREE' ? '期待无偿帮助' : '条件由双方协商'" />
-          <wd-cell title="交流方式" title-width="96px" :value="label(contactModes, dream.contactMode)" />
-          <wd-cell v-if="dream.city" title="所在城市" title-width="96px" :value="dream.city" />
-          <wd-cell title="已接受的帮助" title-width="96px" :value="dream.helperCount + ' 份'" />
-        </wd-cell-group>
+        <view class="info-grid">
+          <view class="info-tile"><wd-icon name="heart" size="18px" color="#6E56F8" /><view class="info-label">需要的帮助</view><view class="info-value">{{ label(helpTypes, dream.helpType) }}</view></view>
+          <view class="info-tile"><wd-icon name="gift" size="18px" color="#FF8DB8" /><view class="info-label">帮助条件</view><view class="info-value">{{ dream.rewardType === 'FREE' ? '期待无偿帮助' : '条件由双方协商' }}</view></view>
+          <view class="info-tile"><wd-icon name="chat" size="18px" color="#20B486" /><view class="info-label">交流方式</view><view class="info-value">{{ label(contactModes, dream.contactMode) }}</view></view>
+          <view class="info-tile"><wd-icon name="user-avatar" size="18px" color="#FFB84D" /><view class="info-label">已接受的帮助</view><view class="info-value">{{ dream.helperCount }} 份</view></view>
+          <view v-if="dream.city" class="info-tile is-wide"><wd-icon name="location" size="18px" color="#9B6BFF" /><view class="info-label">所在城市</view><view class="info-value">{{ dream.city }}</view></view>
+        </view>
       </wd-card>
       <wd-card v-if="dream.helpType === 'CASH'" title="现金心愿">
         <view class="row between section"><view><view class="muted">发布者记录已获得</view><wd-text :text="'¥ ' + dream.receivedAmount" type="primary" size="26px" bold /></view><view v-if="dream.targetAmount" class="muted">期望 ¥ {{ dream.targetAmount }}</view></view>
@@ -33,8 +33,8 @@
       <wd-card custom-class="dream-updates" custom-style="padding-bottom:16px">
         <template #title><view class="row between"><text>圆梦足迹</text><wd-button v-if="dream.isOwner" type="text" size="small" @click="openProgress">记录新进展</wd-button></view></template>
         <view v-if="!dream.updates.length" class="muted">暂无进展</view>
-        <view v-for="(update, index) in dream.updates" :key="update.id">
-          <wd-divider v-if="index" />
+        <view v-for="(update, index) in dream.updates" :key="update.id" class="timeline-item" :style="'animation-delay:' + index * 80 + 'ms'">
+          <view class="timeline-dot" :class="{ 'is-latest': index === 0 }" />
           <view class="muted">{{ date(update.createdAt) }}</view><view class="body-text">{{ update.content }}</view><MediaGallery :media="update.media" />
         </view>
       </wd-card>
@@ -63,6 +63,7 @@
 </template>
 <script setup>
 /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+import DreamLoading from '../../components/DreamLoading.vue'
 import { reactive, ref } from 'vue'
 import { onHide, onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 import AppShell from '../../components/AppShell.vue'
@@ -114,10 +115,30 @@ async function sendProgress() {
 /* 内容排版与底部操作区；卡片、信息行和按钮沿用 Wot 组件。 */
 .dream-detail { overflow-wrap: anywhere; padding-bottom: env(safe-area-inset-bottom); }
 .dream-tags { margin-bottom: 12px; }
-.dream-title { font-size: 20px; font-weight: 650; line-height: 1.5; color: #263e39; margin-bottom: 8px; text-wrap: balance; }
+.dream-title { font-size: 22px; font-weight: 700; line-height: 1.5; color: var(--dream-ink); margin-bottom: 10px; text-wrap: balance; }
+/* 帮助信息：两列信息块，按下轻微下沉。 */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 8px; }
+.info-tile { padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, .3); border: 1px solid rgba(255, 255, 255, .6); transition: transform .3s var(--dream-spring); animation: dream-pop .45s var(--dream-spring) backwards; }
+.info-tile:nth-child(2) { animation-delay: 60ms; } .info-tile:nth-child(3) { animation-delay: 120ms; } .info-tile:nth-child(4) { animation-delay: 180ms; } .info-tile:nth-child(5) { animation-delay: 240ms; }
+.info-tile:active { transform: scale(.96); }
+.info-tile.is-wide { grid-column: span 2; }
+.info-label { margin-top: 6px; font-size: 12px; color: var(--dream-muted); }
+.info-value { margin-top: 2px; font-size: 14px; font-weight: 650; color: var(--dream-ink); }
 .dream-author { display: flex; align-items: center; gap: 10px; }
 .dream-published { font-size: 12px; white-space: nowrap; }
-.dream-story { margin-top: 12px; font-size: 15px; color: #263e39; }
-.dream-action-bar { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid #edf1ef; }
+.dream-story { margin-top: 12px; font-size: 15px; color: var(--dream-ink); }
+:deep(.dream-summary) { background: linear-gradient(180deg, rgba(236, 229, 255, .42) 0%, rgba(255, 255, 255, .2) 46%) !important; }
+:deep(.dream-summary)::after { content: ''; position: absolute; top: -60px; right: -50px; width: 170px; height: 170px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 213, 138, .45), rgba(255, 213, 138, 0) 70%); animation: dream-float 7s ease-in-out infinite; }
+/* 圆梦足迹：竖线时间轴，最新一条的圆点持续发光。 */
+.timeline-item { position: relative; padding: 0 0 18px 22px; animation: dream-rise .5s var(--dream-ease) backwards; }
+.timeline-item::before { content: ''; position: absolute; left: 5px; top: 14px; bottom: -4px; width: 2px; background: linear-gradient(180deg, #D9D0FF, rgba(217, 208, 255, 0)); }
+.timeline-item:last-child::before { display: none; }
+.timeline-dot { position: absolute; left: 0; top: 7px; width: 12px; height: 12px; border-radius: 50%; background: #D9D0FF; }
+.timeline-dot.is-latest { background: var(--dream-gradient); box-shadow: 0 0 0 4px rgba(110, 86, 248, .15); animation: dot-glow 2s ease-in-out infinite; }
+@keyframes dot-glow { 0%, 100% { box-shadow: 0 0 0 4px rgba(110, 86, 248, .15); } 50% { box-shadow: 0 0 0 8px rgba(110, 86, 248, 0); } }
+.dream-action-bar { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--dream-line); box-shadow: 0 -8px 24px rgba(84, 62, 190, .08); animation: bar-up .5s var(--dream-ease) .2s backwards; }
+@keyframes bar-up { from { transform: translateY(100%); } to { transform: none; } }
 .dream-action-content { max-width: 720px; margin: auto; }
 </style>

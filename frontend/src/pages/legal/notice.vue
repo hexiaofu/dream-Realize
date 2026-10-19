@@ -1,6 +1,6 @@
 <template>
   <AppShell title="免责声明" back>
-    <view v-if="loading" class="center"><wd-loading /></view>
+    <DreamLoading v-if="loading" text="正在取来声明全文" />
     <wd-status-tip v-else-if="error" url-prefix="/static/status/" image="network" :tip="error"><template #bottom><wd-button @click="load">重试</wd-button></template></wd-status-tip>
     <NoticeDocument v-else-if="notice" :notice="notice" />
   </AppShell>
@@ -11,6 +11,7 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import AppShell from '../../components/AppShell.vue'
 import NoticeDocument from '../../components/NoticeDocument.vue'
+import DreamLoading from '../../components/DreamLoading.vue'
 import { request } from '../../lib/api'
 const notice = ref(null), loading = ref(false), error = ref('')
 async function load() {

@@ -21,7 +21,7 @@
               <view class="row favorite-actions"><wd-button size="small" plain :disabled="disabled || file.available === false || selected(file)" @click="chooseFavorite(file)">{{ selected(file) ? '已选' : file.contentType === 'image/gif' ? '使用 GIF' : '使用' }}</wd-button><wd-button type="text" size="small" :loading="!!favoriteBusy[file.id]" :disabled="disabled" @click="removeFavorite(file)">移除</wd-button></view>
             </view>
           </view>
-          <view v-if="loading" class="center"><wd-loading /></view>
+          <DreamLoading v-if="loading" inline text="翻找收藏" />
           <view v-else-if="!error && !favorites.length" class="muted center">暂无收藏</view>
           <wd-button v-if="hasMore" block plain :loading="loading" @click="loadFavorites(false)">更多收藏</wd-button>
         </template>
@@ -32,6 +32,7 @@
 </template>
 <script setup>
 /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+import DreamLoading from './DreamLoading.vue'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { mediaUrl, notify, request, requireLogin, uploadMedia } from '../lib/api'
 import { favoriteBusy, favoriteStates, isFavorite, rememberFavorites, setFavorite } from '../lib/commentMedia'
@@ -98,7 +99,7 @@ onBeforeUnmount(() => { disposed = true; version++; tasks.forEach(task => task.a
 .picker-heading { padding: 20px 48px 16px 20px; }
 .picker-scroll { height: 40vh; max-height: 360px; }
 .picker-body { padding: 8px 16px 16px; }
-.picker-footer { padding: 12px 16px 16px; border-top: 1px solid #edf1ef; }
+.picker-footer { padding: 12px 16px 16px; border-top: 1px solid #ECE7FB; }
 .emoji-choice { font-size: 26px; line-height: 40px; }
 .favorite-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 8px; margin-bottom: 12px; }
 .favorite-item { min-width: 0; }

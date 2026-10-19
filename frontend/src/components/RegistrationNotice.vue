@@ -1,6 +1,6 @@
 <template>
   <view class="registration-notice">
-      <view v-if="loading" class="center"><wd-loading /></view>
+      <DreamLoading v-if="loading" inline text="正在取来声明" />
       <view v-else-if="error"><view class="body-text">{{ error }}</view><wd-button type="text" @click="reload">重新加载声明</wd-button></view>
       <template v-else-if="notice">
         <view class="row between"><text>免责声明</text><wd-button type="text" size="small" :disabled="disabled" @click="opened = true">查看完整声明</wd-button></view>
@@ -16,6 +16,7 @@
 </template>
 <script setup>
 /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+import DreamLoading from './DreamLoading.vue'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import NoticeDocument from './NoticeDocument.vue'
 import { request } from '../lib/api'

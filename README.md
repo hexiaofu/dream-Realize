@@ -6,7 +6,7 @@ uni-app 前端 + Spring Boot 后端的梦想互助社区。作者：**沙里飞*
 
 ```text
 frontend/   uni-app + Vue 3 + Wot Design Uni，支持 H5 / 微信小程序构建
-  admin/    独立 Vue 3 + Element Plus 管理后台
+admin/      独立 Vue 3 + Element Plus 管理后台
 backend/    Spring Boot 2.7.18 + Java 8 + Spring JDBC + MySQL 5.7
 ```
 
@@ -36,7 +36,7 @@ UI 采用 [Wot Design Uni](https://netlify.wot-design-uni.cn/guide/quick-use) �
 
 ## 管理后台
 
-界面使用 [Element Plus](https://element-plus.org/en-US/component/table.html) 的表格、筛选、分页、抽屉、对话框和统计组件，源码位于 `frontend/admin/`，不混入用户端登录。
+界面使用 [Element Plus](https://element-plus.org/en-US/component/table.html) 的表格、筛选、分页、抽屉、对话框和统计组件，源码位于 `admin/`，不混入用户端登录。
 
 首次部署时，在启动后端前设置独立管理员账号：
 
@@ -50,14 +50,14 @@ $env:ADMIN_COOKIE_SECURE = 'true'
 管理员账号需为 4–32 位字母、数字或下划线；密码为 12–64 位，UTF-8 不超过 72 字节。仅当 `administrators` 表为空时初始化，不会把已有普通用户提升为管理员，也不会在重启时重置密码。没有配置时不创建默认管理员。初始化成功后可移除密码环境变量。HTTP 本地开发应保持 `ADMIN_COOKIE_SECURE=false`。
 
 ```powershell
-cd frontend/admin
+cd admin
 npm ci
 npm run dev
 # 构建后台
 npm run build
 ```
 
-访问 `http://127.0.0.1:18174`，生产产物位于 `frontend/admin/dist/`。管理后台与 API 应通过同一站点提供，将 `/api` 代理到后端；用户端和后台可以部署为两个站点。后台使用限定到 `/api/admin` 的独立 HttpOnly、SameSite=Strict Cookie 会话，8 小时有效；普通用户 Bearer 会话不能访问后台接口。写操作还要求 `X-Admin-Request: 1` 请求头，管理员密码及会话令牌不保存在浏览器 localStorage。
+访问 `http://127.0.0.1:18174`，生产产物位于 `admin/dist/`。管理后台与 API 应通过同一站点提供，将 `/api` 代理到后端；用户端和后台可以部署为两个站点。后台使用限定到 `/api/admin` 的独立 HttpOnly、SameSite=Strict Cookie 会话，8 小时有效；普通用户 Bearer 会话不能访问后台接口。写操作还要求 `X-Admin-Request: 1` 请求头，管理员密码及会话令牌不保存在浏览器 localStorage。
 
 当前本地预览的管理员凭证保存在 `.runtime/admin-access.json`（已被 Git 忽略），不是源码中的默认账号。
 

@@ -4,7 +4,7 @@
     <view class="muted section">版本 {{ notice.version }} · 生效日期 {{ notice.effectiveDate }}</view>
     <view v-for="section in notice.sections" :key="section.title" class="section">
       <view class="subheading">{{ section.title }}</view>
-      <view v-for="paragraph in section.paragraphs" :key="paragraph.text" class="body-text section"><wd-text :text="paragraph.text" :bold="paragraph.important" color="#263e39" /></view>
+      <view v-for="paragraph in section.paragraphs" :key="paragraph.text" class="body-text section"><wd-text :text="paragraph.text" :bold="paragraph.important" color="#2A2350" /></view>
     </view>
     <wd-cell-group border>
       <wd-cell title="运营方" :label="notice.operator" />

@@ -2,7 +2,7 @@
   <AppShell title="圆梦交流" back>
     <wd-status-tip url-prefix="/static/status/" v-if="error && !thread" image="network" :tip="error"><template #bottom><wd-button @click="load">重试</wd-button></template></wd-status-tip>
     <template v-if="thread">
-      <wd-card>
+      <wd-card custom-class="thread-card">
         <template #title><view class="row"><UserAvatar :src="thread.partnerAvatar" :size="36" /><text class="grow">{{ thread.partnerName }}</text></view></template>
         <wd-text :text="thread.dreamTitle" bold @click="go('/pages/dream/detail?id=' + thread.dreamId)" />
         <view class="row actions"><wd-tag :type="thread.status === 'ACCEPTED' ? 'success' : 'primary'">{{ helpStatus(thread.status) }}</wd-tag><wd-tag plain>{{ thread.rewardType === 'FREE' ? '无偿帮助' : '条件待双方协商' }}</wd-tag></view>
@@ -18,11 +18,11 @@
       <view v-if="error" class="muted section">{{ error }}</view>
       <wd-button v-if="hasOlder" plain block size="small" :loading="loadingOlder" @click="older">更早的消息</wd-button>
       <wd-status-tip url-prefix="/static/status/" v-if="!messages.length" image="content" tip="暂无消息" />
-      <wd-card v-for="message in messages" :key="message.id">
+      <wd-card v-for="message in messages" :key="message.id" :custom-class="message.mine ? 'bubble is-mine' : 'bubble'">
         <template #title><view class="row"><UserAvatar :src="message.senderAvatar" :size="28" /><text class="grow">{{ message.mine ? '我' : message.senderName }}</text></view></template>
         <view class="body-text">{{ message.content }}</view><template #footer><view class="muted">{{ date(message.createdAt) }}</view></template>
       </wd-card>
-      <wd-cell-group v-if="['PENDING','ACCEPTED'].includes(thread.status)" border>
+      <wd-cell-group v-if="['PENDING','ACCEPTED'].includes(thread.status)" border class="chat-composer actions">
         <wd-textarea v-model="content" placeholder="输入消息" :maxlength="2000" show-word-limit />
         <wd-cell><wd-button :loading="sending" :disabled="!content.trim()" @click="send">发送消息</wd-button></wd-cell>
       </wd-cell-group>
@@ -61,3 +61,14 @@ onLoad(options => id = options.id)
 onShow(() => { if (!session.token) { go('/pages/auth/index'); return }; load(); clearInterval(timer); timer = setInterval(load, 5000) })
 onHide(() => clearInterval(timer)); onUnload(() => clearInterval(timer))
 </script>
+<style scoped>
+/* 对话气泡：我方渐变靠右，对方白色靠左，新消息弹入。 */
+:deep(.thread-card) { background: linear-gradient(180deg, rgba(236, 229, 255, .42) 0%, rgba(255, 255, 255, .2) 60%) !important; }
+:deep(.bubble) { width: 82%; margin-right: auto !important; border-radius: 6px 20px 20px 20px !important; animation: bubble-in .45s var(--dream-spring) backwards; transform-origin: 0 0; }
+:deep(.bubble.is-mine) { margin-left: auto !important; margin-right: 0 !important; border-radius: 20px 6px 20px 20px !important; transform-origin: 100% 0;
+  background: linear-gradient(135deg, #7A62FA 0%, #A06EFF 100%) !important; color: #fff; box-shadow: 0 10px 24px rgba(110, 86, 248, .28) !important; }
+:deep(.bubble.is-mine .wd-card__title-content), :deep(.bubble.is-mine .body-text) { color: #fff; }
+:deep(.bubble.is-mine .muted) { color: rgba(255, 255, 255, .7); }
+:deep(.bubble.is-mine .wd-card__footer) { border-top-color: rgba(255, 255, 255, .2); }
+@keyframes bubble-in { from { opacity: 0; transform: scale(.7) translateY(10px); } to { opacity: 1; transform: none; } }
+</style>

@@ -1,13 +1,18 @@
 <template>
   <AppShell active="me" title="我的圆梦空间">
-    <template v-if="!session.token"><wd-button block @click="go('/pages/auth/index')">登录 / 加入社区</wd-button></template>
+    <GuestPrompt v-if="!session.token" title="开启你的圆梦空间" hint="写下梦想、记录足迹，也把你的温柔分享给别人" icon="user" />
     <template v-else>
       <wd-card v-if="session.user?.restriction?.mode === 'READ_ONLY'" title="账号已限制发布">
         <view class="body-text">{{ session.user.restriction.reason }}</view>
         <view class="muted">{{ session.user.restriction.expiresAt ? '截止 ' + session.user.restriction.expiresAt.replace('T', ' ').slice(0, 16) : '长期限制' }}</view>
       </wd-card>
-      <wd-card>
-        <template #title><view class="row"><UserAvatar :src="session.user?.avatarUrl" :size="56" /><text class="grow">{{ session.user?.nickname || '梦想家' }}</text></view></template>
+      <wd-card custom-class="profile-card">
+        <template #title><view class="row"><view class="profile-avatar"><UserAvatar :src="session.user?.avatarUrl" :size="56" /></view><text class="grow profile-name">{{ session.user?.nickname || '梦想家' }}</text></view></template>
+        <view class="profile-stats section">
+          <view class="profile-stat"><view class="stat-num"><AnimatedNumber :value="total" /></view><view class="muted">颗梦想</view></view>
+          <view class="profile-stat"><view class="stat-num">{{ session.user?.commentQualification?.passed ? '✓' : '—' }}</view><view class="muted">评论资格</view></view>
+          <view class="profile-stat"><view class="stat-num">{{ session.user?.city || '—' }}</view><view class="muted">所在城市</view></view>
+        </view>
         <view class="row section"><wd-tag type="success" plain>社区成员</wd-tag><wd-text v-if="session.user?.city" :text="session.user.city" type="info" /></view>
         <view v-if="session.user?.bio" class="body-text">{{ session.user.bio }}</view>
         <template #footer><wd-button size="small" plain @click="edit">编辑资料</wd-button></template>
@@ -15,7 +20,8 @@
       <wd-cell-group border class="section"><wd-cell title="我愿意提供的帮助" :label="session.user?.skills || '未填写'" is-link @click="edit" /><wd-cell title="我的帮助与交流" is-link @click="go('/pages/inbox/index')" /><wd-cell title="查看公开名片" label="不展示匿名梦想" is-link @click="go('/pages/profile/index?id=' + session.user.id)" /></wd-cell-group>
       <view class="row between section"><view class="subheading">我的梦想 · {{ total }}</view><wd-button type="text" @click="go('/pages/publish/index')">发布梦想</wd-button></view>
       <wd-status-tip url-prefix="/static/status/" v-if="error" image="network" :tip="error"><template #bottom><wd-button @click="load(true)">重试</wd-button></template></wd-status-tip>
-      <DreamCard v-for="dream in dreams" :key="dream.id" :dream="dream" />
+      <DreamSkeleton v-if="loading && !dreams.length" :count="1" />
+      <view class="stagger"><DreamCard v-for="dream in dreams" :key="dream.id" :dream="dream" /></view>
       <wd-status-tip url-prefix="/static/status/" v-if="!loading && !error && !dreams.length" image="content" tip="暂无梦想" />
       <wd-button v-if="hasMore" block plain :loading="loading" @click="load(false)">更多梦想</wd-button>
       <view class="actions center"><wd-button type="text" @click="logout">退出登录</wd-button></view>
@@ -47,6 +53,9 @@ import AppShell from '../../components/AppShell.vue'
 import DreamCard from '../../components/DreamCard.vue'
 import UserAvatar from '../../components/UserAvatar.vue'
 import AvatarEditor from '../../components/AvatarEditor.vue'
+import DreamSkeleton from '../../components/DreamSkeleton.vue'
+import GuestPrompt from '../../components/GuestPrompt.vue'
+import AnimatedNumber from '../../components/AnimatedNumber.vue'
 import { request, session, clearSession, go, notify } from '../../lib/api'
 const dreams = ref([]), total = ref(0), editing = ref(false), saving = ref(false), loading = ref(false), hasMore = ref(false), error = ref('')
 const profile = reactive({ nickname: '', bio: '', city: '', skills: '' }); let page = 1
@@ -67,3 +76,15 @@ async function save() { if (saving.value || avatarBlocked.value) return; if (!pr
 function logout() { uni.showModal({ title: '退出登录', content: '确定退出当前账号吗？', success: async result => { if (!result.confirm) return; try { await request('/auth/logout', 'POST'); clearSession(); dreams.value = [] } catch(e) { notify(e) } } }) }
 onShow(() => load(true))
 </script>
+<style scoped>
+/* 个人卡片：顶部星夜渐变，头像带旋转光环。 */
+:deep(.profile-card) { background: linear-gradient(180deg, rgba(236, 229, 255, .42) 0%, rgba(255, 255, 255, .2) 70%) !important; }
+:deep(.profile-card)::after { content: ''; position: absolute; top: -50px; right: -40px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 141, 184, .35), rgba(255, 141, 184, 0) 70%); animation: dream-float 6s ease-in-out infinite; pointer-events: none; }
+.profile-avatar { position: relative; padding: 3px; border-radius: 50%; background: conic-gradient(#6E56F8, #FF8DB8, #FFB84D, #6E56F8); animation: dream-pop .6s var(--dream-spring) backwards; }
+.profile-avatar :deep(.user-avatar) { background: #fff; border-radius: 50%; }
+.profile-name { font-size: 19px; font-weight: 700; }
+.profile-stats { display: flex; padding: 12px 0; border-radius: 16px; background: rgba(255, 255, 255, .28); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6); }
+.profile-stat { flex: 1; min-width: 0; text-align: center; }
+.profile-stat + .profile-stat { border-left: 1px solid var(--dream-line); }
+.stat-num { font-size: 18px; font-weight: 700; color: var(--dream-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+</style>

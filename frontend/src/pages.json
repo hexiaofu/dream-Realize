@@ -14,5 +14,5 @@
     { "path": "pages/chat/index", "style": { "navigationBarTitleText": "圆梦交流" } },
     { "path": "pages/profile/index", "style": { "navigationBarTitleText": "梦想名片" } }
   ],
-  "globalStyle": { "navigationStyle": "custom", "backgroundColor": "#f5f7f6", "navigationBarTextStyle": "black" }
+  "globalStyle": { "navigationStyle": "custom", "backgroundColor": "#F7F4FF", "navigationBarTextStyle": "black" }
 }

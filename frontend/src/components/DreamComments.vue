@@ -1,5 +1,5 @@
 <template>
-  <wd-popup :model-value="modelValue" position="bottom" :z-index="100" :closable="!sending && deleting === null" :close-on-click-modal="!sending && deleting === null" safe-area-inset-bottom custom-class="dream-comments-popup" custom-style="max-width:752px;margin:0 auto;border-radius:20px 20px 0 0;background:#f5f7f6" @update:model-value="emit('update:modelValue', $event)" @after-leave="afterClose">
+  <wd-popup :model-value="modelValue" position="bottom" :z-index="100" :closable="!sending && deleting === null" :close-on-click-modal="!sending && deleting === null" safe-area-inset-bottom custom-class="dream-comments-popup" custom-style="max-width:752px;margin:0 auto;border-radius:24px 24px 0 0;background:rgba(250,247,255,.8)" @update:model-value="emit('update:modelValue', $event)" @after-leave="afterClose">
     <view class="dream-comments">
       <view class="row between comments-header"><view class="subheading">评论 · {{ total }}</view><wd-button type="text" size="small" :loading="loading" @click="load(true)">刷新评论</wd-button></view>
       <scroll-view scroll-y :scroll-into-view="scrollTarget" class="comments-scroll">
@@ -17,7 +17,7 @@
             <CommentMediaGallery :files="comment.media" :restricted="restricted" />
             <template #footer><view class="row between"><text class="muted">{{ date(comment.createdAt) }}</text><wd-button v-if="comment.isMine" type="text" size="small" :disabled="deleting !== null || restricted" @click="remove(comment)">删除</wd-button></view></template>
           </wd-card>
-          <view v-if="loading" class="center"><wd-loading /></view>
+          <DreamLoading v-if="loading" inline text="评论正在飘来" />
           <view v-else-if="!error && !comments.length" class="muted center">暂无评论</view>
           <wd-button v-if="hasMore" block plain :loading="loading" @click="load(false)">更多评论</wd-button>
         </view>
@@ -48,6 +48,7 @@
 </template>
 <script setup>
 /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+import DreamLoading from './DreamLoading.vue'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import UserAvatar from './UserAvatar.vue'
 import CommentMediaGallery from './CommentMediaGallery.vue'
@@ -137,10 +138,10 @@ onBeforeUnmount(() => { disposed = true; sequence++ })
 <style scoped>
 /* 弹层内部滚动布局，输入框与按钮使用 Wot。 */
 .dream-comments { display: flex; flex-direction: column; height: 82vh; max-height: 760px; }
-.comments-header { flex-shrink: 0; padding: 16px 48px 16px 16px; border-bottom: 1px solid #edf1ef; }
+.comments-header { flex-shrink: 0; padding: 16px 48px 16px 16px; border-bottom: 1px solid var(--dream-line); }
 .comments-scroll { flex: 1; min-height: 0; height: 0; }
 .comments-list { padding: 16px; }
-.comments-composer { flex-shrink: 0; padding: 12px 16px 16px; background: #fff; border-top: 1px solid #edf1ef; }
+.comments-composer { flex-shrink: 0; padding: 12px 16px 16px; background: rgba(255, 255, 255, .45); border-top: 1px solid var(--dream-line); box-shadow: 0 -6px 20px rgba(84, 62, 190, .06); }
 .comments-controls { margin-top: 8px; }
 .comments-toolbar { gap: 20px; }
 .comment-draft-media { margin: 4px 0; white-space: nowrap; }
@@ -149,4 +150,12 @@ onBeforeUnmount(() => { disposed = true; sequence++ })
 .comments-composer :deep(.wd-textarea__inner) { height: 64px; }
 /* 独立计数避免组件按 UTF-16 截断表情，前后端统一按 Unicode 字符计数。 */
 .comment-word-count { line-height: 20px; height: 20px; text-align: right; white-space: nowrap; word-break: normal; overflow-wrap: normal; }
+/* 评论卡片依次弹入，抓手条提示可下拉关闭。 */
+.comments-header::before { content: ''; position: absolute; top: 6px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 4px; background: #DCD5F5; }
+.comments-header { position: relative; }
+:deep(.comment-card) { animation: dream-rise .45s var(--dream-ease) backwards; }
+:deep(.comment-card:nth-child(2)) { animation-delay: 50ms; } :deep(.comment-card:nth-child(3)) { animation-delay: 100ms; } :deep(.comment-card:nth-child(4)) { animation-delay: 150ms; } :deep(.comment-card:nth-child(5)) { animation-delay: 200ms; }
+.comments-composer :deep(.wd-textarea) { border-radius: 14px; background: rgba(255, 255, 255, .5); padding: 8px 12px; transition: box-shadow .3s ease; }
+.comments-composer :deep(.wd-textarea:focus-within) { box-shadow: 0 0 0 2px rgba(110, 86, 248, .3); }
+.comments-composer :deep(.wd-textarea__value), .comments-composer :deep(.wd-textarea__inner) { background: transparent; }
 </style>
