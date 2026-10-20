@@ -218,6 +218,36 @@ npm run build:app
 
 `npm run dev:app` 会持续编译到 `dist/dev/app`，配合 HBuilderX“运行到手机或模拟器”进行真机调试。构建通过不代表已完成真机权限、上架审核验证。
 
+## 部署到服务器（www.qhlaotie.cn/dream）
+
+正式包的接口统一走 `https://www.qhlaotie.cn/dream`：Nginx 把 `/dream/` 转发到后端并去掉这个前缀，后端本身仍然提供 `/api/...`，无需改动接口路径。
+
+- 用户端：`frontend/.env.production` 设置 `VITE_API_BASE_URL=https://www.qhlaotie.cn/dream/api`，`npm run build:h5 / build:mp-weixin / build:app` 与 HBuilderX 发行都会使用它；本地 `npm run dev:*` 和 HBuilderX 运行不受影响。图片、视频地址同样经过这个前缀。
+- 管理后台：`admin/.env.production` 设置 `VITE_API_PREFIX=/dream`，打包后请求 `/dream/api/admin`。后台产物使用相对路径，可放在任意目录（例如 `/dream-admin/`）。
+- 后端环境变量：`ADMIN_COOKIE_PATH=/dream/api/admin`（让后台登录 Cookie 与浏览器路径一致，否则后台无法保持登录）、`ADMIN_COOKIE_SECURE=true`、`CORS_ORIGINS=https://www.qhlaotie.cn`（H5 部署在其他域名时改为对应地址，可用逗号分隔多个），以及数据库 `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` 和 `MEDIA_DIR`。
+
+Nginx 参考配置（证书、站点根目录按实际调整）：
+
+```nginx
+server {
+  listen 443 ssl;
+  server_name www.qhlaotie.cn;
+  client_max_body_size 101m;           # 视频最大 100 MB
+
+  location /dream/ {
+    proxy_pass http://127.0.0.1:18080/;  # 结尾的 / 会去掉 /dream 前缀
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 300s;
+  }
+  location /dream-admin/ { alias /var/www/dream-admin/; try_files $uri $uri/ /dream-admin/index.html; }   # admin/dist
+  location /dream-h5/    { alias /var/www/dream-h5/;    try_files $uri $uri/ /dream-h5/index.html; }      # frontend/dist/build/h5
+}
+```
+
+H5 使用 hash 路由并以相对路径加载资源，可直接放在子目录。若站点暂未配置 HTTPS，把 `.env.production` 中的 `https` 改为 `http` 并保持 `ADMIN_COOKIE_SECURE=false`；微信小程序正式版必须使用 HTTPS，并在小程序后台把 `https://www.qhlaotie.cn` 配置为 request、uploadFile、downloadFile 合法域名。
+
 ## 测试
 
 后端接口测试默认使用隔离的 H2 内存数据库：

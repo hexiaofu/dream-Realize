@@ -1,6 +1,8 @@
 /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+// 部署在路径前缀之后（如 /dream）时由 VITE_API_PREFIX 指定，本地开发为空。
+const prefix = (import.meta.env.VITE_API_PREFIX || '').replace(/\/$/, '')
 export async function request(path, method = 'GET', data) {
-  const response = await fetch('/api/admin' + path, {
+  const response = await fetch(prefix + '/api/admin' + path, {
     method, credentials: 'same-origin', cache: 'no-store',
     headers: { 'Content-Type': 'application/json', 'X-Admin-Request': '1' },
     body: data === undefined ? undefined : JSON.stringify(data)
@@ -17,4 +19,4 @@ export const actions = { HIDE: '下架', RESTORE: '恢复', NORMAL: '解除限�
 export const types = { DREAM: '梦想', UPDATE: '进展', COMMENT: '评论', MEMBER: '账号', FEEDBACK: '反馈' }
 export const feedbackStatuses = { NEW: '待处理', PROCESSING: '处理中', RESOLVED: '已处理' }
 export const feedbackCategories = { SUGGESTION: '功能建议', BUG: '问题反馈', EXPERIENCE: '内容与体验', OTHER: '其他' }
-export function mediaUrl(url) { return url?.startsWith('/api/media/') ? url.replace('/api/media/', '/api/admin/media/') : '' }
+export function mediaUrl(url) { return url?.startsWith('/api/media/') ? prefix + url.replace('/api/media/', '/api/admin/media/') : '' }

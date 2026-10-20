@@ -25,14 +25,16 @@ public class AdminAuth {
     private final JdbcTemplate jdbc;
     private final Sessions sessions;
     private final boolean secure;
-    public AdminAuth(JdbcTemplate jdbc,Sessions sessions,@Value("${app.admin-cookie-secure:false}") boolean secure) { this.jdbc=jdbc; this.sessions=sessions; this.secure=secure; }
+    private final String cookiePath;
+    // 反向代理带路径前缀时（如 /dream）浏览器看到的是 /dream/api/admin，Cookie 路径需随之配置。
+    public AdminAuth(JdbcTemplate jdbc,Sessions sessions,@Value("${app.admin-cookie-secure:false}") boolean secure,@Value("${app.admin-cookie-path:/api/admin}") String cookiePath) { this.jdbc=jdbc; this.sessions=sessions; this.secure=secure; this.cookiePath=cookiePath; }
     public void checkWrite(HttpServletRequest request) { Api.require("1".equals(request.getHeader("X-Admin-Request")),403,"无效的后台操作请求"); }
     private String token(HttpServletRequest request) {
         if(request.getCookies()!=null) for(Cookie cookie:request.getCookies()) if(COOKIE.equals(cookie.getName())) return cookie.getValue();
         return "";
     }
     private void cookie(HttpServletResponse response,String value,long maxAge) {
-        response.addHeader("Set-Cookie",ResponseCookie.from(COOKIE,value).httpOnly(true).secure(secure).sameSite("Strict").path("/api/admin").maxAge(maxAge).build().toString());
+        response.addHeader("Set-Cookie",ResponseCookie.from(COOKIE,value).httpOnly(true).secure(secure).sameSite("Strict").path(cookiePath).maxAge(maxAge).build().toString());
     }
     @Transactional public Object login(Requests.Login input,HttpServletRequest request,HttpServletResponse response) {
         checkWrite(request);

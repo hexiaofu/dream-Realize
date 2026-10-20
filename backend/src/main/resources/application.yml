@@ -32,6 +32,7 @@ app:
   admin-username: ${ADMIN_USERNAME:}
   admin-password: ${ADMIN_PASSWORD:}
   admin-cookie-secure: ${ADMIN_COOKIE_SECURE:false}
+  admin-cookie-path: ${ADMIN_COOKIE_PATH:/api/admin}
   media-dir: ${MEDIA_DIR:./uploads}
   cors-origins: ${CORS_ORIGINS:http://localhost:[*],http://127.0.0.1:[*]}
   demo-data: false

@@ -9,7 +9,8 @@
   "h5": {
     "title": "圆梦",
     "router": {
-      "mode": "hash"
+      "mode": "hash",
+      "base": "./"
     }
   },
   "app-plus": {
