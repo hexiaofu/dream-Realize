@@ -4,5 +4,6 @@ import uni from '@dcloudio/vite-plugin-uni'
 
 export default defineConfig({
   plugins: [uni()],
-  server: { proxy: { '/api': { target: 'http://127.0.0.1:18080', changeOrigin: true } } }
+  // API_PROXY_TARGET 可临时指向其他后端，默认本机 18080。
+  server: { proxy: { '/api': { target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:18080', changeOrigin: true } } }
 })

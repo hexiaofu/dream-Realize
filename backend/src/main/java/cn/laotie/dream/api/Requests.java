@@ -75,6 +75,16 @@ public final class Requests {
         @NotBlank @Pattern(regexp="ACCEPTED|DECLINED|WITHDRAWN",message="操作不正确") public String status;
     }
     /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+    public static class Feedback {
+        @NotBlank(message="请选择反馈类型") @Pattern(regexp="SUGGESTION|BUG|EXPERIENCE|OTHER",message="反馈类型不正确") public String category;
+        @NotBlank(message="请填写反馈内容") @Size(max=1000,message="反馈内容最多 1000 字") public String content;
+        @Size(max=100,message="联系方式最多 100 字") public String contact;
+    }
+    /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
+    public static class DirectStart {
+        @NotNull(message="请选择私信对象") @Positive(message="成员编号无效") public Long memberId;
+    }
+    /** @author 沙里飞 @email 1499058156@qq.com @company 青海老铁软件有限公司 */
     public static class Message {
         @NotBlank(message="请输入消息") @Size(max=2000,message="消息最多 2000 字") public String content;
     }

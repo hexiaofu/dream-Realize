@@ -11,7 +11,10 @@
     { "path": "pages/auth/register", "style": { "navigationBarTitleText": "注册账号" } },
     { "path": "pages/admission/index", "style": { "navigationBarTitleText": "评论资格问答" } },
     { "path": "pages/legal/notice", "style": { "navigationBarTitleText": "免责声明" } },
+    { "path": "pages/legal/privacy", "style": { "navigationBarTitleText": "隐私政策" } },
+    { "path": "pages/feedback/index", "style": { "navigationBarTitleText": "意见反馈" } },
     { "path": "pages/chat/index", "style": { "navigationBarTitleText": "圆梦交流" } },
+    { "path": "pages/direct/index", "style": { "navigationBarTitleText": "私信" } },
     { "path": "pages/profile/index", "style": { "navigationBarTitleText": "梦想名片" } }
   ],
   "globalStyle": { "navigationStyle": "custom", "backgroundColor": "#F7F4FF", "navigationBarTextStyle": "black" }

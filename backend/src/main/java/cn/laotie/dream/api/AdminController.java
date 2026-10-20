@@ -3,6 +3,7 @@ package cn.laotie.dream.api;
 import cn.laotie.dream.common.Api;
 import cn.laotie.dream.security.AdminAuth;
 import cn.laotie.dream.service.AdminService;
+import cn.laotie.dream.service.FeedbackService;
 import cn.laotie.dream.service.MediaService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,8 @@ public class AdminController {
     private final AdminAuth auth;
     private final AdminService admin;
     private final MediaService media;
-    public AdminController(AdminAuth auth,AdminService admin,MediaService media) { this.auth=auth; this.admin=admin; this.media=media; }
+    private final FeedbackService feedback;
+    public AdminController(AdminAuth auth,AdminService admin,MediaService media,FeedbackService feedback) { this.auth=auth; this.admin=admin; this.media=media; this.feedback=feedback; }
     @ModelAttribute public void noCache(HttpServletResponse response) { response.setHeader("Cache-Control","no-store"); }
     @PostMapping("/login") public Object login(@Valid @RequestBody Requests.Login body,HttpServletRequest req,HttpServletResponse res) { return Api.ok(auth.login(body,req,res)); }
     @PostMapping("/logout") public Object logout(HttpServletRequest req,HttpServletResponse res) { auth.logout(req,res); return Api.ok(true); }
@@ -37,6 +39,10 @@ public class AdminController {
         auth.require(req); return Api.ok(admin.members(keyword,state,page,size));
     }
     @PatchMapping("/members/{id}/restriction") public Object restrict(HttpServletRequest req,@PathVariable long id,@Valid @RequestBody AdminRequests.Restriction body) { return Api.ok(admin.restrict(id,auth.require(req),body)); }
+    @GetMapping("/feedback") public Object feedback(HttpServletRequest req,@RequestParam(defaultValue="ALL") String state,@RequestParam(defaultValue="ALL") String category,@RequestParam(defaultValue="") String keyword,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="20") int size) {
+        auth.require(req); return Api.ok(feedback.adminList(state,category,keyword,page,size));
+    }
+    @PatchMapping("/feedback/{id}") public Object handleFeedback(HttpServletRequest req,@PathVariable long id,@Valid @RequestBody AdminRequests.Feedback body) { return Api.ok(feedback.handle(id,auth.require(req),body)); }
     @GetMapping("/logs") public Object logs(HttpServletRequest req,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="20") int size) { auth.require(req); return Api.ok(admin.logs(page,size)); }
     @GetMapping("/media/{filename:.+}") public ResponseEntity<Resource> media(HttpServletRequest req,@PathVariable String filename) { auth.require(req); return media.readForAdmin(filename); }
 }

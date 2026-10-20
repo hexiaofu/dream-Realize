@@ -17,6 +17,7 @@
         <el-menu :default-active="section" @select="changeSection">
           <el-menu-item index="contents">内容管理</el-menu-item>
           <el-menu-item index="members">账号管理</el-menu-item>
+          <el-menu-item index="feedback">意见反馈<el-badge v-if="overview.feedbackNew" :value="overview.feedbackNew" class="menu-badge" /></el-menu-item>
           <el-menu-item index="logs">操作日志</el-menu-item>
         </el-menu>
       </el-aside>
@@ -31,6 +32,7 @@
               <el-form inline class="filters" @submit.prevent="search">
                 <template v-if="section !== 'logs'">
                   <el-form-item v-if="section === 'contents'" label="内容"><el-radio-group v-model="filter.type" @change="search"><el-radio-button value="DREAM">梦想</el-radio-button><el-radio-button value="UPDATE">进展</el-radio-button><el-radio-button value="COMMENT">评论</el-radio-button></el-radio-group></el-form-item>
+                  <el-form-item v-if="section === 'feedback'" label="类型"><el-select v-model="filter.category" style="width: 140px" @change="search"><el-option label="全部" value="ALL" /><el-option v-for="(label, value) in feedbackCategories" :key="value" :label="label" :value="value" /></el-select></el-form-item>
                   <el-form-item label="关键词"><el-input v-model="filter.keyword" placeholder="内容、账号或昵称" clearable maxlength="100" @clear="search" /></el-form-item>
                   <el-form-item label="状态"><el-select v-model="filter.state" style="width: 140px" @change="search"><el-option v-for="item in stateOptions" :key="item.value" v-bind="item" /></el-select></el-form-item>
                 </template>
@@ -54,6 +56,16 @@
               <el-table-column label="限制截止" width="160"><template #default="{ row }">{{ row.mode === 'NORMAL' ? '—' : date(row.expiresAt) }}</template></el-table-column>
               <el-table-column prop="reason" label="原因" min-width="180" show-overflow-tooltip />
               <el-table-column label="操作" width="180" fixed="right"><template #default="{ row }"><el-button v-if="!row.admin" link type="primary" @click="openMemberAction(row)">设置限制</el-button><el-button v-if="!row.admin && row.mode !== 'NORMAL'" link type="success" @click="openMemberAction(row, true)">解除</el-button></template></el-table-column>
+            </el-table>
+            <el-table v-else-if="section === 'feedback'" v-loading="loading" :data="items" stripe empty-text="暂无反馈" row-key="id">
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column label="类型" width="110"><template #default="{ row }">{{ feedbackCategories[row.category] }}</template></el-table-column>
+              <el-table-column prop="content" label="反馈内容" min-width="260" show-overflow-tooltip />
+              <el-table-column label="提交者" min-width="150"><template #default="{ row }"><div>{{ row.nickname }}</div><el-text size="small" type="info">{{ row.username }}</el-text></template></el-table-column>
+              <el-table-column label="状态" width="110"><template #default="{ row }"><el-tag :type="row.status === 'NEW' ? 'warning' : row.status === 'PROCESSING' ? 'primary' : 'success'">{{ feedbackStatuses[row.status] }}</el-tag></template></el-table-column>
+              <el-table-column prop="reply" label="回复" min-width="180" show-overflow-tooltip />
+              <el-table-column label="提交时间" width="160"><template #default="{ row }">{{ date(row.createdAt) }}</template></el-table-column>
+              <el-table-column label="操作" width="100" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openFeedback(row)">处理</el-button></template></el-table-column>
             </el-table>
             <el-table v-else v-loading="loading" :data="items" stripe empty-text="暂无操作记录" row-key="id">
               <el-table-column prop="id" label="ID" width="80" /><el-table-column prop="admin" label="管理员" min-width="130" />
@@ -86,6 +98,23 @@
         </template>
       </div>
     </el-drawer>
+    <el-dialog v-model="feedbackOpen" title="处理反馈" width="min(560px, 94vw)" :close-on-click-modal="false" :close-on-press-escape="!saving" :show-close="!saving">
+      <template v-if="feedbackTarget">
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="类型">{{ feedbackCategories[feedbackTarget.category] }}</el-descriptions-item>
+          <el-descriptions-item label="提交者">{{ feedbackTarget.nickname }}（{{ feedbackTarget.username }} / #{{ feedbackTarget.memberId }}）</el-descriptions-item>
+          <el-descriptions-item label="联系方式">{{ feedbackTarget.contact || '未填写' }}</el-descriptions-item>
+          <el-descriptions-item label="提交时间">{{ date(feedbackTarget.createdAt) }}</el-descriptions-item>
+          <el-descriptions-item v-if="feedbackTarget.admin" label="最近处理人">{{ feedbackTarget.admin }}（{{ date(feedbackTarget.updatedAt) }}）</el-descriptions-item>
+        </el-descriptions>
+        <p class="content">{{ feedbackTarget.content }}</p>
+        <el-form label-position="top" @submit.prevent="saveFeedback">
+          <el-form-item label="处理状态"><el-radio-group v-model="feedbackForm.status"><el-radio-button v-for="(label, value) in feedbackStatuses" :key="value" :value="value">{{ label }}</el-radio-button></el-radio-group></el-form-item>
+          <el-form-item label="回复用户（选填，提交者可在“我的 → 意见反馈”看到）"><el-input v-model="feedbackForm.reply" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="例如：已在新版本修复，感谢你的反馈" /></el-form-item>
+          <el-space><el-button :disabled="saving" @click="feedbackOpen = false">取消</el-button><el-button type="primary" native-type="submit" :loading="saving">保存</el-button><el-button @click="findMember(feedbackTarget.username); feedbackOpen = false">管理该账号</el-button></el-space>
+        </el-form>
+      </template>
+    </el-dialog>
     <el-dialog v-model="actionOpen" :title="actionTitle" width="min(480px, 94vw)" :close-on-click-modal="false" :close-on-press-escape="!saving" :show-close="!saving">
       <el-form label-position="top" @submit.prevent="saveAction">
         <el-form-item label="处理对象"><el-text>{{ target?.title || target?.username }}（#{{ target?.id }}）</el-text></el-form-item>
@@ -105,15 +134,16 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import { actions, date, mediaUrl, modes, query, request, types } from './api'
+import { actions, date, feedbackCategories, feedbackStatuses, mediaUrl, modes, query, request, types } from './api'
 const checking = ref(true), admin = ref(null), section = ref('contents'), overview = ref({})
-const credentials = reactive({ username: '', password: '' }), filter = reactive({ type: 'DREAM', keyword: '', state: 'ALL' })
+const credentials = reactive({ username: '', password: '' }), filter = reactive({ type: 'DREAM', keyword: '', state: 'ALL', category: 'ALL' })
+const feedbackOpen = ref(false), feedbackTarget = ref(null), feedbackForm = reactive({ status: 'PROCESSING', reply: '' })
 const items = ref([]), total = ref(0), page = ref(1), loading = ref(false), saving = ref(false), error = ref('')
 const detailOpen = ref(false), detailLoading = ref(false), detail = ref(null), actionOpen = ref(false), actionKind = ref('CONTENT'), target = ref(null)
 const action = reactive({ mode: 'READ_ONLY', durationHours: 168, reason: '' })
-const titles = { contents: '内容管理', members: '账号管理', logs: '操作日志' }
-const metrics = [{ key: 'dreams', label: '梦想总数' }, { key: 'hidden', label: '已下架内容' }, { key: 'members', label: '社区成员' }, { key: 'restricted', label: '受限账号' }]
-const stateOptions = computed(() => [{ label: '全部', value: 'ALL' }, ...(section.value === 'contents' ? [{ label: '可见', value: 'VISIBLE' }, { label: '不可见', value: 'HIDDEN' }] : Object.entries(modes).map(([value, label]) => ({ value, label })))])
+const titles = { contents: '内容管理', members: '账号管理', feedback: '意见反馈', logs: '操作日志' }
+const metrics = [{ key: 'dreams', label: '梦想总数' }, { key: 'hidden', label: '已下架内容' }, { key: 'members', label: '社区成员' }, { key: 'restricted', label: '受限账号' }, { key: 'feedbackNew', label: '待处理反馈' }]
+const stateOptions = computed(() => [{ label: '全部', value: 'ALL' }, ...(section.value === 'contents' ? [{ label: '可见', value: 'VISIBLE' }, { label: '不可见', value: 'HIDDEN' }] : Object.entries(section.value === 'feedback' ? feedbackStatuses : modes).map(([value, label]) => ({ value, label })))])
 const actionTitle = computed(() => actionKind.value === 'MEMBER' ? action.mode === 'NORMAL' ? '解除账号限制' : '设置账号限制' : target.value?.hidden ? '恢复内容' : '下架内容')
 let sequence = 0, detailSequence = 0
 function failed(e) {
@@ -140,7 +170,17 @@ async function load() {
   } catch(e) { if (version === sequence) { error.value = e.message; failed(e) } } finally { if (version === sequence) loading.value = false }
 }
 function search() { page.value = 1; load() }
-function changeSection(value) { section.value = value; filter.keyword = ''; filter.state = 'ALL'; items.value = []; page.value = 1; load() }
+function changeSection(value) { section.value = value; filter.keyword = ''; filter.state = 'ALL'; filter.category = 'ALL'; items.value = []; page.value = 1; load() }
+// 新反馈默认改为“处理中”，已有状态保持不变，回复预填上次内容。
+function openFeedback(row) { feedbackTarget.value = { ...row }; Object.assign(feedbackForm, { status: row.status === 'NEW' ? 'PROCESSING' : row.status, reply: row.reply || '' }); feedbackOpen.value = true }
+async function saveFeedback() {
+  if (saving.value || !feedbackTarget.value) return
+  saving.value = true
+  try {
+    await request('/feedback/' + feedbackTarget.value.id, 'PATCH', { status: feedbackForm.status, expectedStatus: feedbackTarget.value.status, reply: feedbackForm.reply })
+    feedbackOpen.value = false; ElMessage.success('已保存'); await load()
+  } catch(e) { failed(e); if (e.status === 409) { feedbackOpen.value = false; await load() } } finally { saving.value = false }
+}
 async function inspect(row) {
   const version = ++detailSequence; detailOpen.value = true; detail.value = null; detailLoading.value = true
   try { const data = await request(`/contents/${row.type}/${row.id}`); if (version === detailSequence) detail.value = data } catch(e) { detailOpen.value = false; failed(e) } finally { if (version === detailSequence) detailLoading.value = false }
@@ -171,6 +211,7 @@ body { margin: 0; } h2 { margin: 0; font-size: 20px; } .app { min-height: 100vh;
 .sidebar { background: white; border-right: 1px solid var(--el-border-color-light); } .brand { padding: 24px 20px; font-size: 18px; } .sidebar .el-menu { border-right: 0; }
 .toolbar { background: white; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--el-border-color-light); }
 .summary { margin-bottom: 20px; } .summary .el-col { margin-bottom: 12px; } .filters .el-form-item { margin-bottom: 8px; } .pagination { margin-top: 20px; justify-content: flex-end; }
+.menu-badge { margin-left: 8px; } .menu-badge .el-badge__content { vertical-align: middle; }
 .login { display: grid; place-items: center; min-height: 100vh; } .login-card { width: min(400px, 90vw); } .full { width: 100%; }
 .content { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; } .thumbnail { width: 120px; height: 120px; border-radius: 8px; } .video { width: 100%; max-height: 400px; margin-top: 16px; }
 @media (max-width: 700px) { .sidebar { width: 110px !important; } .brand { padding: 20px 10px; font-size: 15px; } .el-main { padding: 12px; } }

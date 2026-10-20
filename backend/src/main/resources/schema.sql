@@ -206,3 +206,42 @@ CREATE TABLE IF NOT EXISTS moderation_logs (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (admin_id) REFERENCES administrators(member_id)
 );
+-- 成员之间的私信：member_low < member_high，一对成员只有一个会话；*_read_id 记录双方各自已读到的消息编号。
+CREATE TABLE IF NOT EXISTS direct_conversations (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  member_low BIGINT NOT NULL,
+  member_high BIGINT NOT NULL,
+  low_read_id BIGINT NOT NULL DEFAULT 0,
+  high_read_id BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (member_low, member_high),
+  FOREIGN KEY (member_low) REFERENCES members(id),
+  FOREIGN KEY (member_high) REFERENCES members(id)
+);
+-- (conversation_id, id) 唯一约束同时作为按会话分页读取的索引，兼容 MySQL 5.7 与 H2。
+CREATE TABLE IF NOT EXISTS direct_messages (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  conversation_id BIGINT NOT NULL,
+  sender_id BIGINT NOT NULL,
+  content VARCHAR(2000) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (conversation_id, id),
+  FOREIGN KEY (conversation_id) REFERENCES direct_conversations(id),
+  FOREIGN KEY (sender_id) REFERENCES members(id)
+);
+-- 用户意见反馈：status 为 NEW / PROCESSING / RESOLVED；reply 是后台回复，会展示给提交者。
+CREATE TABLE IF NOT EXISTS member_feedback (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  member_id BIGINT NOT NULL,
+  category VARCHAR(20) NOT NULL,
+  content VARCHAR(1000) NOT NULL,
+  contact VARCHAR(100) NOT NULL DEFAULT '',
+  status VARCHAR(20) NOT NULL DEFAULT 'NEW',
+  reply VARCHAR(500) NOT NULL DEFAULT '',
+  admin_id BIGINT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (member_id) REFERENCES members(id),
+  FOREIGN KEY (admin_id) REFERENCES administrators(member_id)
+);

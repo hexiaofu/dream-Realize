@@ -6,6 +6,53 @@
   "versionCode": "100",
   "transformPx": false,
   "vueVersion": "3",
-  "h5": { "title": "圆梦", "router": { "mode": "hash" } },
-  "mp-weixin": { "appid": "", "setting": { "urlCheck": true }, "usingComponents": true }
+  "h5": {
+    "title": "圆梦",
+    "router": {
+      "mode": "hash"
+    }
+  },
+  "app-plus": {
+    "usingComponents": true,
+    "compilerVersion": 3,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "modules": {
+      "Camera": {},
+      "VideoPlayer": {}
+    },
+    "distribute": {
+      "android": {
+        "minSdkVersion": 21,
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+          "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+          "<uses-permission android:name=\"android.permission.CAMERA\"/>",
+          "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>",
+          "<uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\"/>",
+          "<uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\"/>"
+        ]
+      },
+      "ios": {
+        "privacyDescription": {
+          "NSCameraUsageDescription": "用于拍摄梦想、进展或评论的照片和视频，以及设置头像",
+          "NSPhotoLibraryUsageDescription": "用于从相册选择梦想、进展或评论的图片和视频，以及设置头像",
+          "NSPhotoLibraryAddUsageDescription": "用于保存你查看的梦想图片到相册",
+          "NSMicrophoneUsageDescription": "用于拍摄带声音的梦想视频"
+        }
+      },
+      "sdkConfigs": {}
+    }
+  },
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": true
+    },
+    "usingComponents": true
+  }
 }

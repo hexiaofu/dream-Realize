@@ -26,13 +26,15 @@ UI 采用 [Wot Design Uni](https://netlify.wot-design-uni.cn/guide/quick-use) �
 - 发布梦想和记录进展时上传图片、视频；图片放大预览、视频播放与拖动、上传进度、失败重试、移除附件、发布草稿恢复。
 - 每条梦想独立选择昵称或匿名；匿名身份贯穿广场、详情、帮助会话与消息，公开个人名片排除匿名梦想。
 - 提倡无偿帮助，支持双方协商条件；支持线上和线下交流，资金交付由双方自行安排。
-- 帮助意愿、接受 / 婉拒 / 撤回、双方私信（页面可见时每 5 秒刷新）、历史消息分页。
+- 帮助意愿、接受 / 婉拒 / 撤回、双方帮助交流（页面可见时每 5 秒刷新）、历史消息分页。
+- 成员私信：在他人的公开名片点“发私信”，一对成员共用一个会话；“消息 → 私信”展示最近会话、最后一条消息和未读数，聊天页每 5 秒刷新。匿名梦想没有名片入口，不会因私信暴露身份；限制发布的账号可以阅读但不能发送或发起新会话。
 - 发布者记录进展、更新自行填报的现金金额、标记进行中 / 已圆梦 / 暂停，也可恢复。
 - 我的梦想、公开名片、技能与资源介绍；统一默认头像，可编辑头像、昵称、城市、简介和能提供的帮助。
 - 梦想可点击“精神支持”或“不同意”，一人一票、互斥切换和取消；先表态才能评论，评论显示当前态度，支持公开/匿名、分页和删除自己的评论，后台可下架或恢复评论。
-- 独立后管：梦想与进展查询、原文和媒体复核、下架 / 恢复、账号限发 / 封禁 / 解除、限时自动恢复、操作日志。
+- 意见反馈：“我的 → 意见反馈”选择类型（功能建议 / 问题反馈 / 内容与体验 / 其他）、填写内容和可选联系方式；同页查看自己最近 20 条反馈的处理状态与官方回复。需要登录，限制发布的账号也可以反馈，每个账号每小时最多 5 条。
+- 独立后管：梦想与进展查询、原文和媒体复核、下架 / 恢复、账号限发 / 封禁 / 解除、限时自动恢复、意见反馈处理、操作日志。
 
-私信目前支持文本；消息页展示最近 100 个会话。当前内容处理由管理员人工操作；自动识别、举报受理、推送通知、支付托管和原生安装包尚未实现。
+帮助交流与私信目前支持文本；消息页各展示最近 100 个会话。私信暂未接入后台审核与举报。当前内容处理由管理员人工操作；自动识别、举报受理、推送通知、支付托管和原生安装包尚未实现。
 
 ## 管理后台
 
@@ -60,6 +62,8 @@ npm run build
 访问 `http://127.0.0.1:18174`，生产产物位于 `admin/dist/`。管理后台与 API 应通过同一站点提供，将 `/api` 代理到后端；用户端和后台可以部署为两个站点。后台使用限定到 `/api/admin` 的独立 HttpOnly、SameSite=Strict Cookie 会话，8 小时有效；普通用户 Bearer 会话不能访问后台接口。写操作还要求 `X-Admin-Request: 1` 请求头，管理员密码及会话令牌不保存在浏览器 localStorage。
 
 当前本地预览的管理员凭证保存在 `.runtime/admin-access.json`（已被 Git 忽略），不是源码中的默认账号。
+
+意见反馈：后台“意见反馈”菜单按状态、类型和关键词筛选，待处理的排在最前，菜单与概览显示待处理数量。点“处理”可查看全文、提交账号和联系方式，设置“待处理 / 处理中 / 已处理”并填写回复；回复会展示在用户的“我的 → 意见反馈”中。每次处理都会写入操作日志，并发修改以状态校验避免覆盖（返回 409）。
 
 处理规则：
 
@@ -104,6 +108,12 @@ npm run build
 声明覆盖身份与履约判断、线下见面、私下转账、有偿帮助、未成年人、个人信息、投诉联系和责任边界。运营方为青海老铁软件有限公司，联系邮箱为 `1499058156@qq.com`。条款参考[《中华人民共和国民法典》](https://www.court.gov.cn/zixun/xiangqing/233181.html)第 496、497、506、1195、1197 条，对主要风险和责任条款作显著提示，保留平台法定义务及用户依法寻求救济的权利。声明不替代隐私政策，正式上线前应由法律专业人员结合实际运营复核。
 
 完整文本唯一来源为 `backend/src/main/resources/legal/registration-notice-v2026-10-16.json`。更新条款应新增版本文件，并更新 `RegistrationNoticeService` 的资源路径及文本中的版本、生效日期；前端直接从服务端读取，避免两端文本不一致。摘要按规范序列化后的完整 JSON 文本计算 SHA-256。新表 `registration_consents` 自动创建，保存成员编号、版本、摘要、文本快照及服务端时间，与注册账号和会话创建处于同一事务中。现有账号及演示账号不补造同意记录，登录不受影响；本次仅对新注册执行确认，后续若要面向老用户征求同意，需要另行明确触发流程。
+
+## 隐私政策
+
+“我的 → 协议与说明”提供《圆梦隐私政策》，访客也可阅读。全文位于 `frontend/src/lib/privacy.js`，与注册声明使用同一套文档样式渲染（`pages/legal/privacy.vue`），内容按本项目实际收集的数据编写：账号与加密密码、个人资料、发布与互动内容、媒体文件、同意与审核记录，以及匿名规则和相机、相册、麦克风权限。更新条款时修改其中的版本与生效日期。
+
+隐私政策目前仅供查看，注册时尚未要求单独勾选同意。上架应用商店前通常需要在注册页同时展示并征得同意，并由法律专业人员结合实际部署（服务器所在地、是否接入第三方 SDK 等）复核。
 
 ## 图片与视频
 
@@ -189,6 +199,25 @@ npm run build:mp-weixin
 
 产物分别位于 `frontend/dist/build/h5` 和 `frontend/dist/build/mp-weixin`。H5 使用 hash 路由；生产环境将 `/api` 反向代理到后端或在构建前指定 API 地址。微信构建通过不代表已完成真机、登录平台或发布审核。
 
+## 打包移动端 App（Android / iOS）
+
+`frontend` 是 uni-app（Vue 3 + Vite）CLI 工程，同一份代码可编译为 App。`src/manifest.json` 的 `app-plus` 已配置相机、相册与视频模块，Android 权限及 iOS 隐私说明（相机、相册、麦克风），均用于发布梦想、头像和评论附件。
+
+```powershell
+cd frontend
+# 在 .env.local 中设置手机可访问的接口地址，例如 VITE_API_BASE_URL=https://你的接口域名/api
+npm run build:app
+```
+
+产物位于 `frontend/dist/build/app`，用 HBuilderX 导入后选择“发行 → 原生 App-云打包”，或用 Android Studio / Xcode 做离线打包。打包前需要：
+
+- 在 HBuilderX 登录 DCloud 账号并为 `manifest.json` 生成 `appid`（云打包必需）。
+- 配置应用图标与启动图（HBuilderX 的 manifest 可视化界面可一键生成各尺寸）。
+- Android 准备签名证书（keystore）；iOS 需要 Apple 开发者账号、证书与描述文件。
+- 接口地址不能是 `127.0.0.1`（那是手机自己）。正式环境请使用 HTTPS 域名；反向代理需放行至少 101 MB 上传请求体。
+
+`npm run dev:app` 会持续编译到 `dist/dev/app`，配合 HBuilderX“运行到手机或模拟器”进行真机调试。构建通过不代表已完成真机权限、上架审核验证。
+
 ## 测试
 
 后端接口测试默认使用隔离的 H2 内存数据库：
@@ -246,11 +275,16 @@ npm run test:e2e
 | `POST /api/dreams/{id}/helps` | 提交帮助意愿 |
 | `GET /api/helps`、`GET/PATCH /api/helps/{id}` | 双方申请与状态管理 |
 | `GET/POST /api/helps/{id}/messages` | 双方消息，`before` 查询更早记录 |
+| `POST /api/direct/conversations` | 提交 `memberId`，打开或首次创建与该成员的私信会话 |
+| `GET /api/direct/conversations`、`GET /api/direct/conversations/{id}` | 私信会话列表（含 `lastMessage`、`unread`）与详情，仅双方可见 |
+| `GET/POST /api/direct/conversations/{id}/messages` | 私信消息，`before` 查询更早记录；读取最新一页时标记已读 |
 | `POST /api/admin/login`、`POST /api/admin/logout`、`GET /api/admin/me` | 独立管理员会话 |
 | `GET /api/admin/overview` | 后台统计 |
 | `GET /api/admin/contents`、`GET/PATCH /api/admin/contents/{type}/{id}` | `DREAM` / `UPDATE` / `COMMENT` 查询、详情、下架与恢复 |
 | `GET /api/admin/members`、`PATCH /api/admin/members/{id}/restriction` | 账号查询、限制与解除 |
 | `GET /api/admin/logs` | 分页查看操作日志 |
+| `POST /api/feedback`、`GET /api/feedback/mine` | 提交意见反馈（`category`、`content`、`contact`）/ 查看自己的反馈与回复 |
+| `GET /api/admin/feedback`、`PATCH /api/admin/feedback/{id}` | 后台反馈列表（`state`、`category`、`keyword`、分页）/ 处理，提交 `{ status, expectedStatus, reply }` |
 | `GET /api/admin/media/{随机文件名}` | 管理员访问已下架媒体 |
 
 `GET /api/dreams` 支持 `keyword/category/helpType/status/page/size/mine`，`size` 为 1–30。匿名字段在后端投影时移除，不依赖前端隐藏。所有内部账户主键、密码哈希和会话摘要均不会作为匿名作者信息下发。

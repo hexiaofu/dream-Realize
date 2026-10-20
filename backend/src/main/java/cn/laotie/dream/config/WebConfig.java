@@ -15,7 +15,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
     @Value("${app.cors-origins}") private String origins;
     @Override public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**").allowedOrigins(origins.split(","))
+        // 使用来源模式，本地开发可写 http://localhost:[*] 适配 HBuilderX 等工具自动分配的端口；精确域名照常生效。
+        registry.addMapping("/api/**").allowedOriginPatterns(origins.split(","))
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             .allowedHeaders("Authorization", "Content-Type", "Range", "X-Admin-Request").allowCredentials(true)
             .exposedHeaders("Accept-Ranges", "Content-Range", "Content-Length").maxAge(3600);

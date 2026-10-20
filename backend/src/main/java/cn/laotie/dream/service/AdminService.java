@@ -33,7 +33,8 @@ public class AdminService {
         return Api.map("dreams",jdbc.queryForObject("SELECT COUNT(*) FROM dreams",Long.class),
             "hidden",jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM dream_moderation WHERE hidden=TRUE)+(SELECT COUNT(*) FROM update_moderation WHERE hidden=TRUE)+(SELECT COUNT(*) FROM comment_moderation cm JOIN dream_comments c ON c.id=cm.comment_id WHERE cm.hidden=TRUE AND c.deleted=FALSE)",Long.class),
             "members",jdbc.queryForObject("SELECT COUNT(*) FROM members m WHERE NOT EXISTS (SELECT 1 FROM administrators a WHERE a.member_id=m.id)",Long.class),
-            "restricted",jdbc.queryForObject("SELECT COUNT(*) FROM member_restrictions WHERE mode<>'NORMAL' AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)",Long.class));
+            "restricted",jdbc.queryForObject("SELECT COUNT(*) FROM member_restrictions WHERE mode<>'NORMAL' AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)",Long.class),
+            "feedbackNew",jdbc.queryForObject("SELECT COUNT(*) FROM member_feedback WHERE status='NEW'",Long.class));
     }
     private String contentFrom(String type) {
         if("COMMENT".equals(type)) return " FROM dream_comments u JOIN dreams d ON d.id=u.dream_id JOIN members m ON m.id=u.member_id LEFT JOIN comment_moderation c ON c.comment_id=u.id ";

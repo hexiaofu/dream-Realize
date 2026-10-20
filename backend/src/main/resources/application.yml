@@ -33,5 +33,5 @@ app:
   admin-password: ${ADMIN_PASSWORD:}
   admin-cookie-secure: ${ADMIN_COOKIE_SECURE:false}
   media-dir: ${MEDIA_DIR:./uploads}
-  cors-origins: ${CORS_ORIGINS:http://localhost:18173,http://127.0.0.1:18173,http://localhost:18174,http://127.0.0.1:18174}
+  cors-origins: ${CORS_ORIGINS:http://localhost:[*],http://127.0.0.1:[*]}
   demo-data: false
