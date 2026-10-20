@@ -228,25 +228,7 @@ npm run build:app
 
 数据库初始化：`backend/sql/init-mysql.sql` 是完整的 MySQL 5.7+ 初始化脚本，创建 `dream_realize` 库（utf8mb4）与全部 25 张表，可重复执行、不覆盖已有数据，也不含任何账号数据；管理员由后端首次启动时根据 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 创建。执行 `mysql -u root -p < backend/sql/init-mysql.sql` 即可；后端启动时同样会用 `schema.sql` 补建缺失的表，两份建表语句由测试 `InitScriptConsistencyTest` 保证一致。
 
-Nginx 参考配置（证书、站点根目录按实际调整）：
-
-```nginx
-server {
-  listen 443 ssl;
-  server_name www.qhlaotie.cn;
-  client_max_body_size 101m;           # 视频最大 100 MB
-
-  location /dream/ {
-    proxy_pass http://127.0.0.1:18080/;  # 结尾的 / 会去掉 /dream 前缀
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_read_timeout 300s;
-  }
-  location /dream-admin/ { alias /var/www/dream-admin/; try_files $uri $uri/ /dream-admin/index.html; }   # admin/dist
-  location /dream-h5/    { alias /var/www/dream-h5/;    try_files $uri $uri/ /dream-h5/index.html; }      # frontend/dist/build/h5
-}
-```
+Nginx 配置：完整配置见 [deploy/nginx/dream.conf](deploy/nginx/dream.conf)，放到 `http {}` 中引用（如 `/etc/nginx/conf.d/dream.conf`），只需按实际修改证书路径、静态文件目录和后端端口。它包含 HTTP 跳转 HTTPS、`/dream/` 去前缀转发到后端、101 MB 上传上限（流式转发）、视频 Range 透传与 300 秒超时、管理后台 `/dream-admin/` 与 H5 `/dream-h5/` 静态目录（带哈希的资源缓存 30 天）。修改后执行 `nginx -t` 校验再 `nginx -s reload`。
 
 H5 使用 hash 路由并以相对路径加载资源，可直接放在子目录。若站点暂未配置 HTTPS，把 `.env.production` 中的 `https` 改为 `http` 并保持 `ADMIN_COOKIE_SECURE=false`；微信小程序正式版必须使用 HTTPS，并在小程序后台把 `https://www.qhlaotie.cn` 配置为 request、uploadFile、downloadFile 合法域名。
 
