@@ -226,6 +226,8 @@ npm run build:app
 - 管理后台：`admin/.env.production` 设置 `VITE_API_PREFIX=/dream`，打包后请求 `/dream/api/admin`。后台产物使用相对路径，可放在任意目录（例如 `/dream-admin/`）。
 - 后端环境变量：`ADMIN_COOKIE_PATH=/dream/api/admin`（让后台登录 Cookie 与浏览器路径一致，否则后台无法保持登录）、`ADMIN_COOKIE_SECURE=true`、`CORS_ORIGINS=https://www.qhlaotie.cn`（H5 部署在其他域名时改为对应地址，可用逗号分隔多个），以及数据库 `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` 和 `MEDIA_DIR`。
 
+数据库初始化：`backend/sql/init-mysql.sql` 是完整的 MySQL 5.7+ 初始化脚本，创建 `dream_realize` 库（utf8mb4）与全部 25 张表，可重复执行、不覆盖已有数据，也不含任何账号数据；管理员由后端首次启动时根据 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 创建。执行 `mysql -u root -p < backend/sql/init-mysql.sql` 即可；后端启动时同样会用 `schema.sql` 补建缺失的表，两份建表语句由测试 `InitScriptConsistencyTest` 保证一致。
+
 Nginx 参考配置（证书、站点根目录按实际调整）：
 
 ```nginx
