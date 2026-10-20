@@ -216,6 +216,8 @@ npm run build:app
 - Android 准备签名证书（keystore）；iOS 需要 Apple 开发者账号、证书与描述文件。
 - 接口地址不能是 `127.0.0.1`（那是手机自己）。正式环境请使用 HTTPS 域名；反向代理需放行至少 101 MB 上传请求体。
 
+权限与合规：Android 声明相机、麦克风（拍摄带声音的视频）、相册读取（含 Android 13 的 `READ_MEDIA_IMAGES/VIDEO`）和网络权限；iOS 提供相机、相册、保存到相册、麦克风的使用说明。首次启动不申请电话和存储权限（`permissionPhoneState` / `permissionExternalStorage` 设为 `none`），仅在拍照、录像或选择文件时按需申请。`src/androidPrivacy.json` 在 Android 首次启动时弹出隐私政策与风险告知，同意后才进入应用，拒绝两次则退出，这是国内应用市场上架的要求；弹窗里的链接指向 `https://www.qhlaotie.cn/dream-h5/#/pages/legal/privacy` 和 `#/pages/legal/notice`，上架前需确保 H5 已部署到该路径。
+
 `npm run dev:app` 会持续编译到 `dist/dev/app`，配合 HBuilderX“运行到手机或模拟器”进行真机调试。构建通过不代表已完成真机权限、上架审核验证。
 
 ## 部署到服务器（www.qhlaotie.cn/dream）

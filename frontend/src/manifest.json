@@ -1,6 +1,6 @@
 {
   "name": "圆梦",
-  "appid": "",
+  "appid": "__UNI__016F28C",
   "description": "让每一个愿望被看见，让善意相遇。青海老铁软件有限公司",
   "versionName": "1.0.0",
   "versionCode": "100",
@@ -33,10 +33,17 @@
           "<uses-permission android:name=\"android.permission.INTERNET\"/>",
           "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
           "<uses-permission android:name=\"android.permission.CAMERA\"/>",
+          "<uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>",
           "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>",
           "<uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\"/>",
           "<uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\"/>"
-        ]
+        ],
+        "permissionPhoneState": {
+          "request": "none"
+        },
+        "permissionExternalStorage": {
+          "request": "none"
+        }
       },
       "ios": {
         "privacyDescription": {
@@ -44,7 +51,8 @@
           "NSPhotoLibraryUsageDescription": "用于从相册选择梦想、进展或评论的图片和视频，以及设置头像",
           "NSPhotoLibraryAddUsageDescription": "用于保存你查看的梦想图片到相册",
           "NSMicrophoneUsageDescription": "用于拍摄带声音的梦想视频"
-        }
+        },
+        "dSYMs": false
       },
       "sdkConfigs": {}
     }

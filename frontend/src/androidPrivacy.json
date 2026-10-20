@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "prompt": "template",
+  "title": "隐私政策与风险告知",
+  "message": "　　欢迎使用圆梦。在你使用前，请务必审慎阅读并充分理解<a href=\"https://www.qhlaotie.cn/dream-h5/#/pages/legal/privacy\">《圆梦隐私政策》</a>和<a href=\"https://www.qhlaotie.cn/dream-h5/#/pages/legal/notice\">《免责声明与线下交流风险告知》</a>。<br/>　　我们仅在你主动拍照、录像或从相册选择文件时，申请相机、麦克风和相册权限，用于发布梦想、记录进展、发表评论和设置头像；不会在后台收集你的位置、通讯录等信息。<br/>　　如果你同意，请点击“同意并继续”开始使用。",
+  "buttonAccept": "同意并继续",
+  "buttonRefuse": "暂不同意",
+  "hrefLoader": "default",
+  "second": {
+    "title": "温馨提示",
+    "message": "　　进入应用前，你需要先同意<a href=\"https://www.qhlaotie.cn/dream-h5/#/pages/legal/privacy\">《圆梦隐私政策》</a>和<a href=\"https://www.qhlaotie.cn/dream-h5/#/pages/legal/notice\">《免责声明与线下交流风险告知》</a>，否则将退出应用。",
+    "buttonAccept": "同意并继续",
+    "buttonRefuse": "退出应用"
+  },
+  "styles": {
+    "backgroundColor": "#FFFFFF",
+    "borderRadius": "16px",
+    "title": { "color": "#2A2350" },
+    "buttonAccept": { "color": "#6E56F8" },
+    "buttonRefuse": { "color": "#8A85A6" }
+  }
+}
